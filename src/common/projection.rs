@@ -1,11 +1,13 @@
 //! Pure graph projections shared by architecture-rule families.
 
+mod edge_projections;
 mod mapped_edge;
 mod project_edges;
 mod project_to_nodes;
 mod projected_edge;
 mod projected_node;
 
+pub use edge_projections::{identity, per_edge, per_external_edge, per_internal_edge};
 pub use mapped_edge::MappedEdge;
 pub use project_edges::{MapFunction, ProjectedGraph, project_edges};
 pub use project_to_nodes::{
