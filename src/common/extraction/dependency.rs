@@ -1,6 +1,7 @@
 use std::slice;
 
 use super::ImportKind;
+use super::ignore_directive::DeclarationSpan;
 
 /// The category of a non-fatal source extraction diagnostic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -272,6 +273,8 @@ pub(crate) struct RawReference {
     pub kind: ImportKind,
     pub line: usize,
     pub binding: Option<String>,
+    pub declaration: Option<DeclarationSpan>,
+    pub ignored: bool,
 }
 
 impl RawReference {

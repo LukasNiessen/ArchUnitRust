@@ -5,7 +5,7 @@ use syn::{
     visit::{self, Visit},
 };
 
-use super::{ImportKind, use_tree::flatten_use_tree};
+use super::{ImportKind, ignore_directive::DeclarationSpan, use_tree::flatten_use_tree};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct VisitedReference {
@@ -13,6 +13,7 @@ pub(crate) struct VisitedReference {
     pub leading_colon: bool,
     pub kind: ImportKind,
     pub line: usize,
+    pub declaration: Option<DeclarationSpan>,
 }
 
 pub(crate) fn references_in_item(item: &Item) -> Vec<VisitedReference> {
@@ -49,6 +50,7 @@ impl ReferenceVisitor {
             leading_colon: path.leading_colon.is_some(),
             kind,
             line: path.span().start().line.max(1),
+            declaration: None,
         });
     }
 
@@ -68,12 +70,14 @@ impl<'ast> Visit<'ast> for ReferenceVisitor {
             ImportKind::PubUse
         };
         let line = item.span().start().line.max(1);
+        let declaration = Some(DeclarationSpan::new(item.span()));
         for flattened in flatten_use_tree(&item.tree) {
             self.references.push(VisitedReference {
                 segments: flattened.segments,
                 leading_colon: item.leading_colon.is_some(),
                 kind,
                 line,
+                declaration,
             });
         }
     }
@@ -87,6 +91,7 @@ impl<'ast> Visit<'ast> for ReferenceVisitor {
             leading_colon: false,
             kind: ImportKind::ExternCrate,
             line: item.span().start().line.max(1),
+            declaration: Some(DeclarationSpan::new(item.span())),
         });
     }
 

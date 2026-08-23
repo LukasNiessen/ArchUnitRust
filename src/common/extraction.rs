@@ -7,6 +7,7 @@ mod extract_graph;
 mod graph;
 mod graph_cache;
 mod identifier;
+mod ignore_directive;
 mod import_kind;
 mod locate_project;
 mod module_tree;

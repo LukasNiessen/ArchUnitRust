@@ -37,6 +37,9 @@ pub(crate) fn extract_dependencies_from_sources(
     let mut references = Vec::new();
 
     for reference in &raw.references {
+        if reference.ignored {
+            continue;
+        }
         let candidates = classification_candidates(
             reference,
             &raw.index,
@@ -398,6 +401,8 @@ mod tests {
             kind: ImportKind::PathReference,
             line: 1,
             binding: None,
+            declaration: None,
+            ignored: false,
         }
     }
 
@@ -460,6 +465,8 @@ mod tests {
             kind: ImportKind::Use,
             line: 1,
             binding: Some("public_api".to_owned()),
+            declaration: None,
+            ignored: false,
         };
         let aliases = collect_internal_aliases(&[import], &index());
         let reference = reference(current, &["public_api", "model", "User"]);
@@ -483,6 +490,8 @@ mod tests {
             kind: ImportKind::Use,
             line: 1,
             binding: Some("local".to_owned()),
+            declaration: None,
+            ignored: false,
         };
         let aliases = collect_internal_aliases(&[import], &index());
         let reference = reference(current, &["local", "Thing"]);

@@ -11,7 +11,7 @@ use crate::{ArchUnitError, CheckOptions, TechnicalError};
 
 const CFG_POLICY: &str = "conservative-union";
 const FEATURE_POLICY: &str = "cargo-metadata-declarations";
-const IGNORE_SCOPE_POLICY: &str = "none";
+const IGNORE_SCOPE_POLICY: &str = "declaration-comments-v1";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct GraphCacheKey {

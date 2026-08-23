@@ -13,6 +13,7 @@ use super::{
     CargoProject, ExtractionDiagnostic, ExtractionDiagnosticKind, ImportKind, SourceFile,
     SourceOptions,
     dependency::{LogicalModule, RawReference},
+    ignore_directive::{DeclarationSpan, IgnoredDeclarations},
     reference_visitor::references_in_attributes,
     reference_visitor::references_in_item,
     use_tree::flatten_use_tree,
@@ -39,6 +40,7 @@ pub(crate) fn extract_raw_dependencies(
         references: Vec::new(),
         diagnostics: Vec::new(),
         active_files: Vec::new(),
+        ignored_declarations: BTreeMap::new(),
     };
 
     for target in project.source_targets(options) {
@@ -71,10 +73,30 @@ pub(crate) fn extract_raw_dependencies(
         );
     }
 
+    let ModuleExtractor {
+        index,
+        references,
+        diagnostics,
+        ignored_declarations,
+        ..
+    } = extractor;
+    let references = references
+        .into_iter()
+        .map(|mut reference| {
+            reference.ignored =
+                ignored_declarations
+                    .get(&reference.source)
+                    .is_some_and(|directives| {
+                        directives.ignores(reference.declaration, &reference.rendered_path())
+                    });
+            reference
+        })
+        .collect();
+
     RawDependencyExtraction {
-        index: extractor.index,
-        references: extractor.references,
-        diagnostics: extractor.diagnostics,
+        index,
+        references,
+        diagnostics,
     }
 }
 
@@ -84,6 +106,7 @@ struct ModuleExtractor {
     references: Vec<RawReference>,
     diagnostics: Vec<ExtractionDiagnostic>,
     active_files: Vec<PathBuf>,
+    ignored_declarations: BTreeMap<String, IgnoredDeclarations>,
 }
 
 impl ModuleExtractor {
@@ -138,6 +161,9 @@ impl ModuleExtractor {
                 return;
             }
         };
+        self.ignored_declarations
+            .entry(source.to_owned())
+            .or_insert_with(|| IgnoredDeclarations::from_source(&contents, &parsed));
 
         self.active_files.push(path.to_path_buf());
         self.walk_items(
@@ -207,6 +233,8 @@ impl ModuleExtractor {
                             kind: reference.kind,
                             line: reference.line,
                             binding: None,
+                            declaration: reference.declaration,
+                            ignored: false,
                         });
                     }
                 }
@@ -244,6 +272,8 @@ impl ModuleExtractor {
             kind: ImportKind::Mod,
             line,
             binding: Some(name.clone()),
+            declaration: Some(DeclarationSpan::new(item.span())),
+            ignored: false,
         });
 
         let path_attribute = self.path_attribute(&item.attrs, source, line);
@@ -345,6 +375,8 @@ impl ModuleExtractor {
                 kind,
                 line,
                 binding: flattened.binding,
+                declaration: Some(DeclarationSpan::new(item.span())),
+                ignored: false,
             });
         }
     }
@@ -367,6 +399,8 @@ impl ModuleExtractor {
                     .as_ref()
                     .map_or_else(|| item.ident.to_string(), |(_, rename)| rename.to_string()),
             ),
+            declaration: Some(DeclarationSpan::new(item.span())),
+            ignored: false,
         });
     }
 
@@ -385,6 +419,8 @@ impl ModuleExtractor {
                 kind: reference.kind,
                 line: reference.line,
                 binding: None,
+                declaration: reference.declaration,
+                ignored: false,
             });
         }
     }
