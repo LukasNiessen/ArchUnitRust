@@ -20,5 +20,6 @@ pub use common::matching::{
 };
 pub use common::projection::{
     MapFunction, MappedEdge, NodeProjectionOptions, ProjectedEdge, ProjectedGraph, ProjectedNode,
-    project_edges, project_to_nodes, project_to_nodes_with_options,
+    identity, per_edge, per_external_edge, per_internal_edge, project_edges, project_to_nodes,
+    project_to_nodes_with_options,
 };
