@@ -47,6 +47,10 @@ pub use layers::assertion::{
     LayerDefinition, LayerDependencyRule, LayerDependencyViolation,
     gather_layer_dependency_violations,
 };
+pub use layers::fluentapi::{
+    LayerDefinitionBuilder, LayerDependencyRuleBuilder, LayeredArchitecture, layers, layers_in,
+    project_layers, project_layers_in,
+};
 pub use testing::{
     ColorChoice, ColorUtils, ResultFactory, TestResult, TestResultOptions, TestViolation,
     ViolationFactory,
