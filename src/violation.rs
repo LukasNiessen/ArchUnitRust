@@ -1,6 +1,9 @@
+//! Closed aggregation of violation data owned by the individual rule domains.
+
 use std::fmt;
 
-use super::{CycleViolation, EmptyTestViolation};
+use crate::common::assertion::EmptyTestViolation;
+use crate::files::assertion::CycleViolation;
 
 /// The machine-readable family of a [`Violation`].
 ///

@@ -74,10 +74,12 @@ gone wrong — go and look at how a sibling does it.
 src/common/         the kernel — everything shared
 src/  extraction/   the dependency-graph extractor  <- the only Rust-specific code
 src/  projection/   reshaping the graph, plus cycles/
-src/  assertion/    Violation, EmptyTestViolation
-src/  fluentapi/    Checkable, CheckOptions
+src/  assertion/    domain-neutral violation data such as EmptyTestViolation
+src/  fluentapi/    shared fluent values such as CheckOptions
 src/  error/        TechnicalError, UserError
 src/  util/         logging, pattern matching, path helpers
+src/checkable.rs    the cross-domain terminal contract
+src/violation.rs    the closed cross-domain violation sum
 src/files/          file-level dependency and naming rules
 src/layers/         named-layer policy
 src/slices/         component and diagram rules
@@ -103,12 +105,15 @@ files/
 is what lets you test them against hand-built fixture graphs before the extractor works at all, and
 you should.
 
-Four dependency rules, which are just the library's own architecture rules:
+Five dependency rules, which are just the library's own architecture rules:
 
 1. `common` depends on nothing but the standard library and the Rust analysis toolchain.
 2. Domain modules depend on `common`. **They must not depend on each other.**
-3. `testing` depends on `common` and on the domain modules' violation types. Nothing else.
-4. The public surface depends on everything, and nothing depends on it.
+3. The top-level `checkable` and `violation` aggregation modules join domain-owned violation data
+   into the closed, cross-domain contracts. They contain no rule behavior.
+4. `testing` depends on `common`, the aggregation contracts and the domain modules' violation types.
+   Nothing else.
+5. The public surface depends on everything, and nothing depends on it.
 
 Rule 2 is the one that decays first. `files` reaching into `slices` for "just one helper" is the
 classic failure — the helper belongs in `common/projection` instead.
