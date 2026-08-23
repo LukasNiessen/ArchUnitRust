@@ -14,3 +14,4 @@ rewriting history after released behavior depends on it.
 - [0008: Use the built-in harness without an adapter](0008-use-the-built-in-harness-without-an-adapter.md)
 - [0009: Model layers as a lazy file-graph policy](0009-model-layers-as-a-lazy-file-graph-policy.md)
 - [0010: Query once and render one graph snapshot](0010-query-once-and-render-one-graph-snapshot.md)
+- [0011: Render six formats from one offline-safe boundary](0011-render-six-formats-from-one-offline-safe-boundary.md)

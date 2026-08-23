@@ -190,6 +190,43 @@ summary counts. `raw_edge_count` counts selected merged file-to-file edges befor
 `edge_count` counts the final aggregated edges. This snapshot is the single input contract for every
 output format.
 
+## Dependency graph renderers
+
+The graph builder renders DOT, Mermaid, D2, CSV, JSON, and self-contained HTML. Each format has a
+`to_*()` string terminal and an `export_as_*()` UTF-8 file terminal. Export creates missing parent
+directories; the chosen method determines the format rather than the file extension.
+
+```rust,no_run
+use archunit::{ArchUnitError, GraphRenderer, project_graph};
+
+fn export_architecture() -> Result<(), ArchUnitError> {
+    let report = project_graph()
+        .collapse_to_folder_depth(2)
+        .titled("Application Dependencies");
+
+    let mermaid = report.to_mermaid()?;
+    println!("{mermaid}");
+    report.export_as_html("target/architecture/dependencies.html")?;
+
+    // Reuse one extraction explicitly when several formats are needed.
+    let snapshot = report.snapshot()?;
+    let dot = GraphRenderer::to_dot(&snapshot);
+    let json = GraphRenderer::to_json(&snapshot);
+    assert!(!dot.is_empty() && !json.is_empty());
+    Ok(())
+}
+```
+
+The six corresponding methods are `to_dot`, `to_mermaid`, `to_d2`, `to_csv`, `to_json`, and
+`to_html`, plus `export_as_dot`, `export_as_mermaid`, `export_as_d2`, `export_as_csv`,
+`export_as_json`, and `export_as_html`. `GraphRenderer::render` and `GraphRenderer::export` provide
+typed dispatch through `GraphReportFormat`.
+
+DOT, Mermaid, and D2 retain aggregated edge counts and visually distinguish external dependencies.
+CSV contains one row per aggregated edge. JSON contains the complete snapshot contract. HTML embeds
+its CSS and portable source views directly in the document: it has no scripts, remote assets, or
+network dependency.
+
 ## Testing and framework-neutral results
 
 `assert_passes!(rule)` and `assert_passes!(rule, check_options)` are the native integration for
