@@ -5,5 +5,6 @@ mod common;
 
 pub use common::extraction::{Edge, Graph, ImportKind, ImportKindSet};
 pub use common::matching::{
-    Filter, Pattern, PatternError, PatternOptions, PatternSyntax, PatternTarget,
+    Filter, Pattern, PatternError, PatternOptions, PatternSyntax, PatternTarget, RegexFactory,
+    RegexFactoryOptions,
 };
