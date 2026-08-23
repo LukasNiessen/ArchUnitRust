@@ -1,5 +1,7 @@
 use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
 
+use super::{NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder};
+
 /// Immutable scope builder selecting the files to which a rule applies.
 ///
 /// Selector methods consume and return the builder, so a reusable scope can be cloned and branched.
@@ -45,6 +47,16 @@ impl FileConditionBuilder {
     pub fn in_file(self, path: impl AsRef<str>) -> Self {
         let filter = RegexFactory::default().exact_file_matcher(path);
         self.with_filter(filter)
+    }
+
+    /// Enters the positive mood for a file predicate.
+    pub fn should(self) -> PositiveMatchPatternFileConditionBuilder {
+        PositiveMatchPatternFileConditionBuilder::new(self)
+    }
+
+    /// Enters the negated mood for a file predicate.
+    pub fn should_not(self) -> NegatedMatchPatternFileConditionBuilder {
+        NegatedMatchPatternFileConditionBuilder::new(self)
     }
 
     /// Returns where Cargo project discovery will begin.
@@ -171,5 +183,16 @@ mod tests {
         assert_eq!(builder.filters().len(), 1);
         assert_eq!(error.pattern(), "src/[api");
         assert!(error.message().contains("not closed"));
+    }
+
+    #[test]
+    fn enters_exactly_the_positive_or_negated_mood() {
+        let scope = project_files().in_path("src/**");
+
+        let positive = scope.clone().should();
+        let negative = scope.should_not();
+
+        assert!(!positive.is_negated());
+        assert!(negative.is_negated());
     }
 }

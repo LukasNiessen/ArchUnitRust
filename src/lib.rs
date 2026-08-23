@@ -25,5 +25,7 @@ pub use common::projection::{
     project_edges, project_internal_cycles, project_to_nodes, project_to_nodes_with_options,
 };
 pub use files::fluentapi::{
-    FileConditionBuilder, files, files_in, project_files, project_files_in,
+    FileConditionBuilder, MatchPatternFileConditionBuilder,
+    NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
+    files_in, project_files, project_files_in,
 };

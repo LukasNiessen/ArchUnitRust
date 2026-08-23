@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use archunit::{
+    NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder,
     SourceOptions, extract_graph, files, files_in, locate_project_from, project_files,
     project_files_in, project_to_nodes,
 };
@@ -60,4 +61,24 @@ fn invalid_selectors_remain_diagnostic_without_interrupting_the_sentence() {
         .expect("invalid selector should be retained for the future terminal");
     assert_eq!(error.pattern(), "crates/[app");
     assert_eq!(scope.filters().len(), 0);
+}
+
+#[test]
+fn should_and_should_not_are_distinct_thin_moods_over_shared_state() {
+    let base = project_files_in("examples/layered")
+        .in_folder("src/**")
+        .with_name("*.rs");
+    let positive: PositiveMatchPatternFileConditionBuilder = base.clone().should();
+    let negative: NegatedMatchPatternFileConditionBuilder = base.should_not();
+
+    assert!(!positive.is_negated());
+    assert!(negative.is_negated());
+    assert_eq!(positive.filters().len(), 2);
+    assert_eq!(negative.filters().len(), 2);
+    assert_eq!(
+        positive.project_locator().path(),
+        negative.project_locator().path()
+    );
+    assert!(positive.selector_error().is_none());
+    assert!(negative.selector_error().is_none());
 }
