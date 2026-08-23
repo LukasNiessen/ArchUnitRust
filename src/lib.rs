@@ -33,7 +33,8 @@ pub use files::assertion::{
     gather_file_dependency_violations, gather_matching_file_violations,
 };
 pub use files::fluentapi::{
-    CycleFreeFileCondition, DependOnFileCondition, DependOnFileConditionBuilder,
+    CycleFreeFileCondition, DependOnExternalModuleCondition,
+    DependOnExternalModuleConditionBuilder, DependOnFileCondition, DependOnFileConditionBuilder,
     FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder,
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
