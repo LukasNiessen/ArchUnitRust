@@ -53,6 +53,21 @@ let boundary = project_files()
 let _: &dyn Checkable = &boundary;
 ```
 
+External dependency rules match Cargo-visible crate names. Repeated `matching` selectors are OR
+alternatives, making allowlists and denylists straightforward:
+
+```rust
+use archunit::{Checkable, project_files};
+
+let approved_crates = project_files()
+    .should()
+    .depend_on_external_modules()
+    .matching("std")
+    .matching("serde");
+
+let _: &dyn Checkable = &approved_crates;
+```
+
 The graph model is also available directly:
 
 ```rust
