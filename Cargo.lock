@@ -16,7 +16,9 @@ name = "archunit"
 version = "0.0.1"
 dependencies = [
  "cargo_metadata",
+ "proc-macro2",
  "regex",
+ "syn 2.0.119",
  "thiserror 2.0.20",
 ]
 

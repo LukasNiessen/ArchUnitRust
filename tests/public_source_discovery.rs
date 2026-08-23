@@ -62,9 +62,19 @@ fn production_enumeration_is_sorted_deduplicated_and_workspace_scoped() {
     assert_eq!(
         identifiers,
         [
+            "crates/app/alternate/storage.rs",
             "crates/app/build/custom.rs",
             "crates/app/cmd/server.rs",
+            "crates/app/source/ambiguous.rs",
+            "crates/app/source/ambiguous/mod.rs",
+            "crates/app/source/api.rs",
+            "crates/app/source/api/model.rs",
+            "crates/app/source/broken.rs",
+            "crates/app/source/inline/nested.rs",
+            "crates/app/source/inline/redirected.rs",
+            "crates/app/source/legacy/mod.rs",
             "crates/app/source/library.rs",
+            "crates/app/source/platform.rs",
             "crates/app/source/shared.rs",
             "crates/macros/macro_src/entry.rs",
         ]
@@ -96,7 +106,7 @@ fn development_target_roots_are_included_only_when_requested() {
     ] {
         assert!(identifiers.contains(&expected));
     }
-    assert_eq!(identifiers.len(), 8);
+    assert_eq!(identifiers.len(), 18);
 }
 
 #[test]
