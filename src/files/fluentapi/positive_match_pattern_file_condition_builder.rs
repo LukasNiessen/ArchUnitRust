@@ -1,8 +1,9 @@
-use crate::{Filter, PatternError, ProjectLocator};
+use crate::{FileInfo, Filter, PatternError, ProjectLocator};
 
 use super::{
-    CycleFreeFileCondition, DependOnExternalModuleConditionBuilder, DependOnFileConditionBuilder,
-    FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder,
+    CustomFileCondition, CycleFreeFileCondition, DependOnExternalModuleConditionBuilder,
+    DependOnFileConditionBuilder, FileConditionBuilder, MatchPatternFileCondition,
+    MatchPatternFileConditionBuilder,
 };
 
 /// The `should` mood for file predicates.
@@ -81,5 +82,13 @@ impl PositiveMatchPatternFileConditionBuilder {
     /// Starts an allowlist rule over external crate dependencies from the selected files.
     pub fn depend_on_external_modules(self) -> DependOnExternalModuleConditionBuilder {
         self.condition.depend_on_external_modules()
+    }
+
+    /// Requires every selected file to satisfy `predicate`.
+    pub fn adhere_to<F>(self, predicate: F, message: impl Into<String>) -> CustomFileCondition
+    where
+        F: Fn(&FileInfo) -> bool + Send + Sync + 'static,
+    {
+        self.condition.adhere_to(predicate, message)
     }
 }

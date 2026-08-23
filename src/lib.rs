@@ -35,7 +35,7 @@ pub use files::assertion::{
 };
 pub use files::extraction::FileInfo;
 pub use files::fluentapi::{
-    CycleFreeFileCondition, DependOnExternalModuleCondition,
+    CustomFileCondition, CycleFreeFileCondition, DependOnExternalModuleCondition,
     DependOnExternalModuleConditionBuilder, DependOnFileCondition, DependOnFileConditionBuilder,
     FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder,
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
