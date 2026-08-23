@@ -19,6 +19,25 @@ let _: &dyn Checkable = &rule;
 
 Rules are lazy: building this sentence reads no files. Calling `check()` locates the Cargo project,
 extracts its dependency graph, and returns one data-carrying cycle violation per circular path.
+
+The same scope and mood grammar applies to file naming and placement. All three predicates support
+both `should()` and `should_not()`:
+
+```rust
+use archunit::{Checkable, project_files};
+
+let naming = project_files()
+    .in_folder("src/services")
+    .should()
+    .have_name("*_service.rs");
+let placement = project_files()
+    .with_name("*_test.rs")
+    .should_not()
+    .be_in_path("src/**");
+
+let _: [&dyn Checkable; 2] = [&naming, &placement];
+```
+
 The graph model is also available directly:
 
 ```rust
