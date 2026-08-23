@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use archunit::{
     Edge, Graph, ImportKind, MapFunction, MappedEdge, NodeProjectionOptions, ProjectLocator,
-    SourceOptions, extract_graph, locate_project_from, project_edges, project_to_nodes,
-    project_to_nodes_with_options,
+    SourceOptions, extract_graph, identity, locate_project_from, per_edge, per_external_edge,
+    per_internal_edge, project_edges, project_to_nodes, project_to_nodes_with_options,
 };
 
 #[test]
@@ -26,6 +26,35 @@ fn public_map_hook_filters_relabels_and_preserves_raw_evidence() {
     assert_eq!(projected[0].source_label, "API");
     assert_eq!(projected[0].target_label, "Domain");
     assert_eq!(projected[0].cumulated_edges, [first, second]);
+}
+
+#[test]
+fn built_in_edge_mappers_compose_with_the_public_projection_hook() {
+    let internal = Edge::new("src/lib.rs", "src/domain.rs", false, [ImportKind::Use]);
+    let external = Edge::new("src/lib.rs", "serde", true, [ImportKind::Use]);
+    let self_edge = Edge::self_edge("src/lib.rs");
+    let graph = Graph::from_edges([self_edge.clone(), internal.clone(), external.clone()]);
+
+    assert_eq!(
+        project_edges(&graph, per_edge())
+            .into_iter()
+            .flat_map(|edge| edge.cumulated_edges)
+            .collect::<Vec<_>>(),
+        [external.clone(), internal.clone()]
+    );
+    assert_eq!(
+        project_edges(&graph, per_internal_edge())[0].cumulated_edges,
+        [internal]
+    );
+    assert_eq!(
+        project_edges(&graph, per_external_edge())[0].cumulated_edges,
+        [external]
+    );
+    assert!(
+        project_edges(&graph, identity())
+            .iter()
+            .any(|edge| edge.cumulated_edges.as_slice() == std::slice::from_ref(&self_edge))
+    );
 }
 
 #[test]
