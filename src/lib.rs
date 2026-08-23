@@ -43,6 +43,7 @@ pub use files::fluentapi::{
     files_in, project_files, project_files_in,
 };
 pub use testing::{
-    ColorChoice, ColorUtils, TestResult, TestResultOptions, TestViolation, ViolationFactory,
+    ColorChoice, ColorUtils, ResultFactory, TestResult, TestResultOptions, TestViolation,
+    ViolationFactory,
 };
 pub use violation::{Violation, ViolationKind};

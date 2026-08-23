@@ -91,6 +91,12 @@ impl ColorUtils {
     pub fn red_bold(text: impl AsRef<str>, choice: ColorChoice) -> String {
         colorize(text.as_ref(), "1;31", choice)
     }
+
+    /// Makes text bold and green without nested reset sequences.
+    #[must_use]
+    pub fn green_bold(text: impl AsRef<str>, choice: ColorChoice) -> String {
+        colorize(text.as_ref(), "1;32", choice)
+    }
 }
 
 fn colorize(text: &str, code: &str, choice: ColorChoice) -> String {
@@ -127,6 +133,10 @@ mod tests {
         assert_eq!(
             ColorUtils::red_bold("failure", ColorChoice::Always),
             "\x1b[1;31mfailure\x1b[0m"
+        );
+        assert_eq!(
+            ColorUtils::green_bold("success", ColorChoice::Always),
+            "\x1b[1;32msuccess\x1b[0m"
         );
     }
 
