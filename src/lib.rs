@@ -19,7 +19,7 @@ pub use common::matching::{
     RegexFactoryOptions,
 };
 pub use common::projection::{
-    MapFunction, MappedEdge, NodeProjectionOptions, ProjectedEdge, ProjectedGraph, ProjectedNode,
-    identity, per_edge, per_external_edge, per_internal_edge, project_edges, project_to_nodes,
-    project_to_nodes_with_options,
+    MapFunction, MappedEdge, NodeProjectionOptions, ProjectedCycles, ProjectedEdge, ProjectedGraph,
+    ProjectedNode, identity, per_edge, per_external_edge, per_internal_edge, project_cycles,
+    project_edges, project_internal_cycles, project_to_nodes, project_to_nodes_with_options,
 };
