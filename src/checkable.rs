@@ -24,6 +24,15 @@ pub trait Checkable {
     fn check_with(&self, options: &CheckOptions) -> CheckResult;
 }
 
+impl<T> Checkable for &T
+where
+    T: Checkable + ?Sized,
+{
+    fn check_with(&self, options: &CheckOptions) -> CheckResult {
+        (**self).check_with(options)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{CheckResult, Checkable};
@@ -61,5 +70,13 @@ mod tests {
 
         assert!(matches!(result, Err(ArchUnitError::Technical(_))));
         assert!(options.clears_cache());
+    }
+
+    #[test]
+    fn borrowed_rules_preserve_the_terminal_contract() {
+        fn require_checkable<T: Checkable>(_: T) {}
+
+        require_checkable(&OptionEchoRule);
+        assert!(OptionEchoRule.check().is_ok());
     }
 }

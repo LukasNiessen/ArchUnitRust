@@ -47,3 +47,36 @@ pub use testing::{
     ViolationFactory,
 };
 pub use violation::{Violation, ViolationKind};
+
+#[doc(hidden)]
+pub use testing::evaluate_assertion as __evaluate_assertion;
+
+/// Asserts that an architecture rule produces no violations.
+///
+/// The optional second argument is a [`CheckOptions`] expression. The rule is evaluated exactly
+/// once and borrowed, so completed terminals remain reusable. Both architecture violations and
+/// check errors become one assertion failure formatted by the shared testing layer.
+///
+/// # Examples
+///
+/// ```no_run
+/// use archunit::{CheckOptions, assert_passes, project_files};
+///
+/// let rule = project_files().in_folder("src/**").should().have_no_cycles();
+/// assert_passes!(rule);
+///
+/// let options = CheckOptions::new().with_test_sources(true);
+/// assert_passes!(rule, options);
+/// ```
+#[macro_export]
+macro_rules! assert_passes {
+    ($rule:expr $(,)?) => {{
+        let __archunit_check_options = $crate::CheckOptions::default();
+        let __archunit_result = $crate::__evaluate_assertion(&$rule, &__archunit_check_options);
+        assert!(__archunit_result.passed, "{}", __archunit_result.message);
+    }};
+    ($rule:expr, $options:expr $(,)?) => {{
+        let __archunit_result = $crate::__evaluate_assertion(&$rule, &$options);
+        assert!(__archunit_result.passed, "{}", __archunit_result.message);
+    }};
+}

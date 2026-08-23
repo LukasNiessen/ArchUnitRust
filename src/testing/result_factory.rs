@@ -1,5 +1,6 @@
 use crate::{
-    ColorUtils, TestResult, TestResultOptions, TestViolation, Violation, ViolationFactory,
+    ArchUnitError, ColorUtils, TestResult, TestResultOptions, TestViolation, Violation,
+    ViolationFactory,
 };
 
 /// Shapes structured violations into a framework-neutral pass flag and complete message.
@@ -45,6 +46,29 @@ impl ResultFactory {
             }
         }
     }
+
+    /// Shapes an architecture-check error using auto color detection.
+    pub fn from_error(error: &ArchUnitError) -> TestResult {
+        Self::from_error_with_options(error, &TestResultOptions::default())
+    }
+
+    /// Shapes an architecture-check error with explicit presentation options.
+    ///
+    /// A check error never satisfies an inverted architecture expectation because no verdict was
+    /// reached.
+    pub fn from_error_with_options(
+        error: &ArchUnitError,
+        options: &TestResultOptions,
+    ) -> TestResult {
+        let context = match error {
+            ArchUnitError::User(_) => "Architecture rule is invalid",
+            ArchUnitError::Technical(_) => "Architecture check could not run",
+        };
+        TestResult::new(
+            false,
+            ColorUtils::red_bold(format!("{context}: {error}"), options.color()),
+        )
+    }
 }
 
 fn format_violations(
@@ -85,7 +109,10 @@ fn format_violations(
 
 #[cfg(test)]
 mod tests {
-    use crate::{ColorChoice, EmptyTestViolation, ResultFactory, TestResultOptions, Violation};
+    use crate::{
+        ArchUnitError, ColorChoice, EmptyTestViolation, ResultFactory, TechnicalError,
+        TestResultOptions, UserError, Violation,
+    };
 
     fn empty_violation(subject: &str) -> Violation {
         Violation::from(EmptyTestViolation::new(subject, []))
@@ -175,6 +202,27 @@ mod tests {
             failure
                 .message
                 .contains("\x1b[33m  1. Empty test violation\x1b[0m")
+        );
+    }
+
+    #[test]
+    fn check_errors_are_failures_even_for_an_inverted_expectation() {
+        let options = plain_options().with_expected_to_pass(false);
+        let user = ArchUnitError::from(UserError::new("the selector is invalid"));
+        let technical = ArchUnitError::from(TechnicalError::new("Cargo metadata failed"));
+
+        let user_result = ResultFactory::from_error_with_options(&user, &options);
+        let technical_result = ResultFactory::from_error_with_options(&technical, &options);
+
+        assert!(!user_result.passed);
+        assert_eq!(
+            user_result.message,
+            "Architecture rule is invalid: archunit: the selector is invalid"
+        );
+        assert!(!technical_result.passed);
+        assert_eq!(
+            technical_result.message,
+            "Architecture check could not run: archunit: Cargo metadata failed"
         );
     }
 }
