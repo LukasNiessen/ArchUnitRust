@@ -28,11 +28,13 @@ pub use common::projection::{
     project_edges, project_internal_cycles, project_to_nodes, project_to_nodes_with_options,
 };
 pub use files::assertion::{
-    CycleViolation, FilePatternViolation, gather_cycle_violations, gather_matching_file_violations,
+    CycleViolation, FileDependencyViolation, FilePatternViolation, gather_cycle_violations,
+    gather_file_dependency_violations, gather_matching_file_violations,
 };
 pub use files::fluentapi::{
-    CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileCondition,
-    MatchPatternFileConditionBuilder, NegatedMatchPatternFileConditionBuilder,
-    PositiveMatchPatternFileConditionBuilder, files, files_in, project_files, project_files_in,
+    CycleFreeFileCondition, DependOnFileCondition, DependOnFileConditionBuilder,
+    FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder,
+    NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
+    files_in, project_files, project_files_in,
 };
 pub use violation::{Violation, ViolationKind};

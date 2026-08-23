@@ -38,6 +38,21 @@ let placement = project_files()
 let _: [&dyn Checkable; 2] = [&naming, &placement];
 ```
 
+Relational rules use the same sentence grammar. Positive dependency rules are allowlists for every
+outgoing dependency from the selected files; negated rules are denylists:
+
+```rust
+use archunit::{Checkable, project_files};
+
+let boundary = project_files()
+    .in_folder("src/api")
+    .should_not()
+    .depend_on_files()
+    .in_folder("src/database");
+
+let _: &dyn Checkable = &boundary;
+```
+
 The graph model is also available directly:
 
 ```rust

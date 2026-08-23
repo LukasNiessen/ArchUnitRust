@@ -1,6 +1,9 @@
 use crate::{Filter, PatternError, ProjectLocator};
 
-use super::{FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder};
+use super::{
+    DependOnFileConditionBuilder, FileConditionBuilder, MatchPatternFileCondition,
+    MatchPatternFileConditionBuilder,
+};
 
 /// The `should_not` mood for file predicates.
 #[derive(Debug, Clone)]
@@ -63,5 +66,10 @@ impl NegatedMatchPatternFileConditionBuilder {
     /// Forbids selected files whose complete normalized path matches `pattern`.
     pub fn be_in_path(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
         self.condition.be_in_path(pattern)
+    }
+
+    /// Starts a denylist rule over dependencies from the selected files.
+    pub fn depend_on_files(self) -> DependOnFileConditionBuilder {
+        self.condition.depend_on_files()
     }
 }

@@ -1,6 +1,6 @@
 use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
 
-use super::{FileConditionBuilder, MatchPatternFileCondition};
+use super::{DependOnFileConditionBuilder, FileConditionBuilder, MatchPatternFileCondition};
 
 /// Shared immutable state for positive and negated file-predicate builders.
 ///
@@ -63,6 +63,11 @@ impl MatchPatternFileConditionBuilder {
     pub fn be_in_path(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().path_matcher(pattern);
         self.matching(check_filter)
+    }
+
+    /// Starts an internal file-dependency rule and enters its object-selector stage.
+    pub fn depend_on_files(self) -> DependOnFileConditionBuilder {
+        DependOnFileConditionBuilder::new(self)
     }
 
     fn matching(self, check_filter: Result<Filter, PatternError>) -> MatchPatternFileCondition {
