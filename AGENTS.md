@@ -286,9 +286,9 @@ assert helper's job, at the very edge.
 
 ## Working here
 
-- **Commit straight to `main`.** No branching ceremony, no required review, no pull requests. There
-  are no users yet and one maintainer. Speed is the point. (This does *not* apply to ArchUnitTS and
-  ArchUnitPython, which have real users and full process.)
+- **Use the issue/branch/pull-request workflow in [CONTRIBUTING.md](CONTRIBUTING.md).** Work on one
+  issue at a time, use conventional branch names, merge the pull request before beginning the next,
+  and do not commit product changes directly to `main`.
 - **Test the pure parts against fixture graphs**, and add one integration test per rule through the
   fluent API against a sample project. The first is where the coverage comes from; the second proves
   the wiring.
