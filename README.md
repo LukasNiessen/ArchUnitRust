@@ -107,6 +107,32 @@ workspace-relative path, filename without extension, extension and containing di
 predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
 thread-safe values.
 
+## Framework-neutral test results
+
+Violations remain structured data until the testing layer formats them. `ViolationFactory` owns
+the wording for every built-in violation; `ResultFactory` adds pass/fail semantics, numbering and
+optional ANSI color. This is the low-level bridge for custom test or CI integration:
+
+```rust,no_run
+use archunit::{
+    Checkable, ColorChoice, ResultFactory, TestResultOptions, project_files,
+};
+
+let rule = project_files()
+    .in_folder("src/**")
+    .should()
+    .have_no_cycles();
+let violations = rule.check().expect("the architecture check should run");
+let display = TestResultOptions::new().with_color(ColorChoice::Never);
+let result = ResultFactory::from_violations_with_options(&violations, &display);
+
+assert_eq!(result.passed, violations.is_empty());
+```
+
+`ColorChoice::Auto` is the default and respects terminal capability, `NO_COLOR`, `TERM=dumb`, and
+`CI=true`; `Always` and `Never` make output deterministic. Higher-level assertion helpers use these
+same factories, so message formatting does not drift between integrations.
+
 The graph model is also available directly:
 
 ```rust
