@@ -113,6 +113,43 @@ workspace-relative path, filename without extension, extension and containing di
 predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
 thread-safe values.
 
+## Named layer policies
+
+Layers turn a set of file selectors into a compact dependency policy. The target list is a borrowed
+slice in Rust; an empty allowlist seals a layer against every cross-layer dependency:
+
+```rust,no_run
+use archunit::{assert_passes, project_layers};
+
+#[test]
+fn dependencies_follow_the_declared_layers() {
+    let rule = project_layers()
+        .layer("api")
+        .defined_by("src/api/**")
+        .layer("application")
+        .defined_by_folder("src/application")
+        .layer("database")
+        .defined_by("src/database/**")
+        .where_layer("api")
+        .may_only_depend_on_layers(&["application"])
+        .where_layer("application")
+        .may_only_depend_on_layers(&["database"])
+        .where_layer("database")
+        .may_only_depend_on_layers(&[]);
+
+    assert_passes!(rule);
+}
+```
+
+`layers()` aliases `project_layers()`; explicit project entry points are `layers_in(path)` and
+`project_layers_in(path)`. Repeating `layer(name)` adds another OR selector to that layer. If layer
+definitions overlap, the first declared layer wins. Dependencies within one layer and dependencies
+with either endpoint outside every declared layer are ignored.
+
+`may_not_depend_on_layers(&[...])` adds a blocklist. Blocklists are evaluated before allowlists, so
+one file edge produces at most one layer violation even when both policies reject it. Source layers
+used by a policy receive the same strict empty-selection guard as file rules.
+
 ## Testing and framework-neutral results
 
 `assert_passes!(rule)` and `assert_passes!(rule, check_options)` are the native integration for
