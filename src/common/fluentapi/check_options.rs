@@ -65,13 +65,13 @@ impl CheckOptions {
         self
     }
 
-    /// Returns whether Cargo test and benchmark targets participate in analysis.
+    /// Returns whether Cargo test, example, and benchmark targets participate in analysis.
     #[must_use]
     pub const fn includes_test_sources(&self) -> bool {
         self.include_test_sources
     }
 
-    /// Controls whether Cargo test and benchmark targets participate in analysis.
+    /// Controls whether Cargo test, example, and benchmark targets participate in analysis.
     #[must_use]
     pub const fn with_test_sources(mut self, include: bool) -> Self {
         self.include_test_sources = include;
