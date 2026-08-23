@@ -101,4 +101,3 @@ implementation detail users want to police.
 - maintain fixture workspaces for every supported resolution form;
 - keep graph/report ordering deterministic so extractor changes are reviewable;
 - consider a future opt-in semantic backend only after real false-negative reports justify its cost.
-

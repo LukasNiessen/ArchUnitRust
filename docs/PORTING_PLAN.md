@@ -1,7 +1,7 @@
 # ArchUnitRust porting plan
 
-**Status:** accepted direction for the initial implementation  
-**Last reviewed:** 2026-08-23  
+**Status:** accepted direction for the initial implementation
+**Last reviewed:** 2026-08-23
 **Tracking issue:** [#45](https://github.com/LukasNiessen/ArchUnitRust/issues/45)
 
 This document turns the shared ArchUnitEverything architecture into an executable Rust plan. It is
@@ -266,4 +266,3 @@ It does not promise compiler-exact macro expansion, build-script-generated sourc
 active-target `cfg` evaluation, rust-analyzer semantic parity, or item-level architecture nodes.
 Those are roadmap features. File nodes remain the compatibility surface even though the internal
 module index is Rust-native.
-

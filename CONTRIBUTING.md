@@ -51,4 +51,3 @@ The sibling libraries are strong references, not specifications for unidiomatic 
 diverges because Rust's module system, type system, ownership model, or testing conventions demand
 it, explain the trade-off in the pull request. Add or supersede an ADR when the choice affects future
 public behavior.
-
