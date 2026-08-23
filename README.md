@@ -4,21 +4,24 @@ Architecture testing for Rust. Part of **ArchUnitEverything** — one architectu
 
 > Early development. Nothing to install yet.
 
-A fluent file rule is usable as an ordinary Rust test value:
+A fluent file rule is an ordinary Rust test value. The zero-configuration assertion macro is the
+universal path through the built-in harness and any Rust test framework that recognizes assertion
+panics:
 
-```rust
-use archunit::{Checkable, project_files};
+```rust,no_run
+use archunit::{assert_passes, project_files};
 
 let rule = project_files()
     .in_folder("src/**")
     .should()
     .have_no_cycles();
 
-let _: &dyn Checkable = &rule;
+assert_passes!(rule);
 ```
 
-Rules are lazy: building this sentence reads no files. Calling `check()` locates the Cargo project,
-extracts its dependency graph, and returns one data-carrying cycle violation per circular path.
+Rules are lazy: building this sentence reads no files. `assert_passes!` calls `check()`, locates the
+Cargo project, extracts its dependency graph and emits the shared numbered failure message when
+violations are found. The macro borrows the rule, so named terminals remain reusable.
 
 A scope that selects no files returns one typed `EmptyTestViolation` by default; it never silently
 passes because a path was misspelled or became stale. This guard applies to every terminal and
@@ -26,7 +29,7 @@ checks selected files rather than dependency edges, so an existing isolated file
 empty. Intentional empty scopes require an explicit per-check opt-out:
 
 ```rust,no_run
-use archunit::{CheckOptions, Checkable, project_files};
+use archunit::{CheckOptions, assert_passes, project_files};
 
 let optional_rule = project_files()
     .in_folder("generated/**")
@@ -34,7 +37,7 @@ let optional_rule = project_files()
     .have_no_cycles();
 let options = CheckOptions::new().with_allow_empty_tests(true);
 
-let _ = optional_rule.check_with(&options);
+assert_passes!(optional_rule, options);
 ```
 
 The same scope and mood grammar applies to file naming and placement. All three predicates support
@@ -107,11 +110,15 @@ workspace-relative path, filename without extension, extension and containing di
 predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
 thread-safe values.
 
-## Framework-neutral test results
+## Testing and framework-neutral results
 
-Violations remain structured data until the testing layer formats them. `ViolationFactory` owns
+`assert_passes!(rule)` and `assert_passes!(rule, check_options)` are the documented test fallback.
+They preserve both formatted architecture violations and classified check errors in the assertion
+message. No adapter setup is required.
+
+Violations remain structured data until that testing layer formats them. `ViolationFactory` owns
 the wording for every built-in violation; `ResultFactory` adds pass/fail semantics, numbering and
-optional ANSI color. This is the low-level bridge for custom test or CI integration:
+optional ANSI color. These values remain the low-level bridge for custom test or CI integration:
 
 ```rust,no_run
 use archunit::{
@@ -130,8 +137,8 @@ assert_eq!(result.passed, violations.is_empty());
 ```
 
 `ColorChoice::Auto` is the default and respects terminal capability, `NO_COLOR`, `TERM=dumb`, and
-`CI=true`; `Always` and `Never` make output deterministic. Higher-level assertion helpers use these
-same factories, so message formatting does not drift between integrations.
+`CI=true`; `Always` and `Never` make output deterministic. The assertion macro uses these same
+factories, so message formatting does not drift between integrations.
 
 The graph model is also available directly:
 
