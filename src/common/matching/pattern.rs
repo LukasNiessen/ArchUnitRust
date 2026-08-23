@@ -132,6 +132,17 @@ impl Pattern {
         self.regex.is_match(&normalize_separators(candidate))
     }
 
+    /// Replaces this pattern's match in a normalized candidate.
+    ///
+    /// Rust `regex` replacement syntax is supported, including `$1` and `${name}` captures. Because
+    /// every [`Pattern`] is anchored, a matching replacement always covers the complete candidate.
+    #[must_use]
+    pub fn replace(&self, candidate: &str, replacement: &str) -> String {
+        self.regex
+            .replace(&normalize_separators(candidate), replacement)
+            .into_owned()
+    }
+
     fn compile(
         source: &str,
         syntax: PatternSyntax,
@@ -419,6 +430,21 @@ mod tests {
 
         assert_eq!(pattern.source(), r"src\api\**");
         assert_eq!(pattern.to_string(), r#""src\api\**""#);
+    }
+
+    #[test]
+    fn replaces_complete_normalized_candidates_with_capture_groups() {
+        let pattern = Pattern::regex(r"src/([^/]+)/.*\.rs")
+            .expect("fixture regular expression should compile");
+
+        assert_eq!(
+            pattern.replace(r"src\application\service.rs", "$1"),
+            "application"
+        );
+        assert_eq!(
+            pattern.replace("tests/application/service.rs", "$1"),
+            "tests/application/service.rs"
+        );
     }
 
     #[test]

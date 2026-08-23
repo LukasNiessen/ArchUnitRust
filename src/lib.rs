@@ -4,6 +4,7 @@
 mod checkable;
 mod common;
 mod files;
+mod graph;
 mod layers;
 mod testing;
 mod violation;
@@ -42,6 +43,15 @@ pub use files::fluentapi::{
     FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder,
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
+};
+pub use graph::fluentapi::{
+    ProjectGraphBuilder, dependency_graph, dependency_graph_in, project_graph, project_graph_in,
+};
+pub use graph::projection::{
+    DEFAULT_GRAPH_TITLE, FolderDepthCollapse, GraphCollapse, GraphQueryError, GraphQueryOptions,
+    GraphReportEdge, GraphReportNode, GraphReportSnapshot, GraphReportSummary,
+    GraphSnapshotFactory, PatternCollapse, aggregate_graph_edges, collapse_graph_node,
+    create_graph_snapshot,
 };
 pub use layers::assertion::{
     LayerDefinition, LayerDependencyRule, LayerDependencyViolation,

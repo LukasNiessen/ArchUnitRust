@@ -150,6 +150,46 @@ with either endpoint outside every declared layer are ignored.
 one file edge produces at most one layer violation even when both policies reject it. Source layers
 used by a policy receive the same strict empty-selection guard as file rules.
 
+## Dependency graph snapshots
+
+Graph reports first build one renderer-neutral snapshot. Every query modifier is immutable and lazy;
+only `snapshot()` or `summary()` locates and extracts the Cargo project:
+
+```rust,no_run
+use archunit::{ArchUnitError, CheckOptions, project_graph};
+
+fn architecture_snapshot() -> Result<(), ArchUnitError> {
+    let snapshot = project_graph()
+        .include_external_dependencies()
+        .focus_on("src/**", 1)
+        .reachable_from("src/api/**")
+        .collapse_to_folder_depth(2)
+        .titled("Application Dependencies")
+        .with_check_options(CheckOptions::new().with_clear_cache(true))
+        .snapshot()?;
+
+    println!("{} nodes", snapshot.summary.node_count);
+    Ok(())
+}
+```
+
+`dependency_graph()` is an alias; `project_graph_in(path)` and `dependency_graph_in(path)` start at
+an explicit directory or manifest. Queries include undirected `focus_on(pattern, depth)`, transitive
+outgoing `reachable_from(pattern)`, and transitive incoming `dependents_of(pattern)`. When several
+are present, their selected nodes are combined as a union and the snapshot contains the induced
+subgraph.
+
+External dependencies and self dependencies are excluded by default. Collapse with
+`collapse_to_folder_depth(depth)` or use a Rust regular expression whose first capture becomes the
+label with `collapse_by_pattern(expression)`. The explicit replacement form is
+`collapse_by_pattern_with_replacement(expression, replacement)` and uses Rust `regex` syntax such as
+`$1` or `${component}`.
+
+The snapshot owns stable sorted node IDs, aggregated edges, Rust import-kind unions, a title, and
+summary counts. `raw_edge_count` counts selected merged file-to-file edges before collapsing;
+`edge_count` counts the final aggregated edges. This snapshot is the single input contract for every
+output format.
+
 ## Testing and framework-neutral results
 
 `assert_passes!(rule)` and `assert_passes!(rule, check_options)` are the native integration for
