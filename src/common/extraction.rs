@@ -1,17 +1,26 @@
 mod cargo_project;
+mod dependency;
 mod edge;
 mod enumerate_source_files;
+mod extract_dependencies;
 mod graph;
 mod identifier;
 mod import_kind;
 mod locate_project;
+mod module_tree;
 mod project_locator;
+mod reference_visitor;
 mod source_file;
 mod source_options;
+mod use_tree;
 
 pub use cargo_project::{CargoProject, CargoTarget, CargoTargetKind};
+pub use dependency::{
+    DependencyExtraction, DependencyReference, ExtractionDiagnostic, ExtractionDiagnosticKind,
+};
 pub use edge::Edge;
 pub use enumerate_source_files::{DEFAULT_EXCLUDED_DIRECTORIES, enumerate_source_files};
+pub use extract_dependencies::extract_dependencies;
 pub use graph::Graph;
 pub use import_kind::{ImportKind, ImportKindSet};
 pub use locate_project::{locate_project, locate_project_from};
