@@ -68,6 +68,28 @@ let approved_crates = project_files()
 let _: &dyn Checkable = &approved_crates;
 ```
 
+Custom predicates cover project-specific facts without expanding the built-in vocabulary. They
+receive immutable, normalized `FileInfo` data and run once for each selected file:
+
+```rust
+use archunit::{Checkable, FileInfo, project_files};
+
+let manageable_modules = project_files()
+    .in_folder("src/**")
+    .should()
+    .adhere_to(
+        |file: &FileInfo| file.non_blank_line_count <= 200,
+        "contain at most 200 non-blank lines",
+    );
+
+let _: &dyn Checkable = &manageable_modules;
+```
+
+Alongside the line count and full source text, `FileInfo` exposes the normalized
+workspace-relative path, filename without extension, extension and containing directory. Stored
+predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
+thread-safe values.
+
 The graph model is also available directly:
 
 ```rust

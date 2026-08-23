@@ -7,3 +7,4 @@ rewriting history after released behavior depends on it.
 - [0001: Syntax and module-tree extraction](0001-syntax-and-module-tree-extraction.md)
 - [0002: Deferred fluent selector errors](0002-defer-fluent-selector-errors-to-check.md)
 - [0003: Aggregate closed violations above domains](0003-aggregate-closed-violations-above-domains.md)
+- [0004: Store custom file predicates as thread-safe values](0004-store-custom-file-predicates-as-thread-safe-values.md)
