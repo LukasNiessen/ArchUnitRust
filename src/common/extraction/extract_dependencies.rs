@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
     CargoProject, DependencyExtraction, DependencyReference, DependencyTarget,
-    ExtractionDiagnostic, ExtractionDiagnosticKind, ImportKind, SourceOptions,
+    ExtractionDiagnostic, ExtractionDiagnosticKind, ImportKind, SourceFile, SourceOptions,
     cargo_project::CargoDependencyTarget,
     dependency::{InternalResolution, LogicalModule, RawReference},
     enumerate_source_files,
@@ -20,7 +20,17 @@ pub fn extract_dependencies(
     options: SourceOptions,
 ) -> Result<DependencyExtraction, ArchUnitError> {
     let sources = enumerate_source_files(project, options)?;
-    let raw = extract_raw_dependencies(project, options, &sources);
+    Ok(extract_dependencies_from_sources(
+        project, options, &sources,
+    ))
+}
+
+pub(crate) fn extract_dependencies_from_sources(
+    project: &CargoProject,
+    options: SourceOptions,
+    sources: &[SourceFile],
+) -> DependencyExtraction {
+    let raw = extract_raw_dependencies(project, options, sources);
     let internal_aliases = collect_internal_aliases(&raw.references, &raw.index);
     let cargo_aliases = collect_cargo_aliases(&raw.references, project);
     let mut diagnostics = raw.diagnostics;
@@ -78,7 +88,7 @@ pub fn extract_dependencies(
         ));
     }
 
-    Ok(DependencyExtraction::new(references, diagnostics))
+    DependencyExtraction::new(references, diagnostics)
 }
 
 type AliasKey = (LogicalModule, String);

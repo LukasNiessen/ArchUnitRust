@@ -1,13 +1,16 @@
-use std::fmt;
-use std::iter::FromIterator;
-use std::slice;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    iter::FromIterator,
+    slice,
+};
 
-use super::Edge;
+use super::{Edge, ImportKind};
 
 /// The extracted dependency graph.
 ///
-/// This first kernel slice intentionally stores only edges. Extraction issue #10 adds the canonical
-/// merging and self-edge population invariants before any rule relies on them.
+/// Edges are ordered by normalized `(source, target)`. Parallel edges are merged and their import
+/// kinds are unioned, so every endpoint pair occurs at most once.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Graph {
     edges: Vec<Edge>,
@@ -20,15 +23,36 @@ impl Graph {
         Self { edges: Vec::new() }
     }
 
-    /// Creates a graph from extracted edges.
+    /// Creates a deterministic graph and merges parallel endpoint pairs.
+    ///
+    /// If inconsistent callers describe one endpoint pair as both internal and external, the
+    /// internal classification wins. Same-source pairs become canonical marker self-edges.
     #[must_use]
     pub fn from_edges(edges: impl IntoIterator<Item = Edge>) -> Self {
-        Self {
-            edges: edges.into_iter().collect(),
+        let mut merged = BTreeMap::<(String, String), (bool, BTreeSet<ImportKind>)>::new();
+        for edge in edges {
+            let edge = Edge::new(
+                &edge.source,
+                &edge.target,
+                edge.external,
+                edge.import_kinds.iter(),
+            );
+            let key = (edge.source, edge.target);
+            let entry = merged
+                .entry(key)
+                .or_insert_with(|| (edge.external, BTreeSet::new()));
+            entry.0 &= edge.external;
+            entry.1.extend(edge.import_kinds.iter());
         }
+
+        let edges = merged
+            .into_iter()
+            .map(|((source, target), (external, kinds))| Edge::new(source, target, external, kinds))
+            .collect();
+        Self { edges }
     }
 
-    /// Returns all edges in extraction order.
+    /// Returns all merged edges in deterministic endpoint order.
     #[must_use]
     pub fn edges(&self) -> &[Edge] {
         &self.edges
@@ -110,8 +134,8 @@ mod tests {
     }
 
     #[test]
-    fn collects_and_iterates_in_extraction_order() {
-        let graph: Graph = fixture_edges().into_iter().collect();
+    fn collects_and_iterates_in_endpoint_order() {
+        let graph: Graph = fixture_edges().into_iter().rev().collect();
 
         let targets = graph
             .iter()
@@ -121,6 +145,23 @@ mod tests {
 
         let owned = graph.into_iter().collect::<Vec<_>>();
         assert_eq!(owned, fixture_edges());
+    }
+
+    #[test]
+    fn merges_parallel_kinds_and_canonicalizes_same_file_references() {
+        let graph = Graph::from_edges([
+            Edge::new("src/a.rs", "src/b.rs", false, [ImportKind::PathReference]),
+            Edge::new("src/a.rs", "src/b.rs", false, [ImportKind::Use]),
+            Edge::new("src/a.rs", "src/a.rs", false, [ImportKind::PathReference]),
+            Edge::self_edge("src/a.rs"),
+        ]);
+
+        assert_eq!(graph.len(), 2);
+        assert_eq!(graph.edges()[0], Edge::self_edge("src/a.rs"));
+        assert_eq!(
+            graph.edges()[1].import_kinds.iter().collect::<Vec<_>>(),
+            [ImportKind::Use, ImportKind::PathReference]
+        );
     }
 
     #[test]
