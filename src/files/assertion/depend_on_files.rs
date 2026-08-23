@@ -118,12 +118,21 @@ mod tests {
     #[test]
     fn object_filters_are_combined_with_and_semantics() {
         let filters = service_filters();
-        let only_folder =
-            gather_file_dependency_violations(&edges(), &subject_filters(), &filters[..1], true);
+        let mut dependencies = edges();
+        dependencies.push(dependency(
+            "src/controller.rs",
+            "src/service/order_repository.rs",
+        ));
+        let only_folder = gather_file_dependency_violations(
+            &dependencies,
+            &subject_filters(),
+            &filters[..1],
+            true,
+        );
         let folder_and_name =
-            gather_file_dependency_violations(&edges(), &subject_filters(), &filters, true);
+            gather_file_dependency_violations(&dependencies, &subject_filters(), &filters, true);
 
-        assert_eq!(only_folder.len(), 1);
+        assert_eq!(only_folder.len(), 2);
         assert_eq!(folder_and_name.len(), 1);
         let dependency = folder_and_name[0]
             .as_file_dependency()
