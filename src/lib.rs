@@ -31,8 +31,8 @@ pub use files::assertion::{
     CycleViolation, FilePatternViolation, gather_cycle_violations, gather_matching_file_violations,
 };
 pub use files::fluentapi::{
-    CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileConditionBuilder,
-    NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
-    files_in, project_files, project_files_in,
+    CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileCondition,
+    MatchPatternFileConditionBuilder, NegatedMatchPatternFileConditionBuilder,
+    PositiveMatchPatternFileConditionBuilder, files, files_in, project_files, project_files_in,
 };
 pub use violation::{Violation, ViolationKind};

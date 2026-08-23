@@ -1,6 +1,6 @@
 use crate::{Filter, PatternError, ProjectLocator};
 
-use super::{FileConditionBuilder, MatchPatternFileConditionBuilder};
+use super::{FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder};
 
 /// The `should_not` mood for file predicates.
 #[derive(Debug, Clone)]
@@ -48,5 +48,20 @@ impl NegatedMatchPatternFileConditionBuilder {
     #[must_use]
     pub const fn selector_error(&self) -> Option<&PatternError> {
         self.condition.selector_error()
+    }
+
+    /// Forbids selected files whose final path segment matches `pattern`.
+    pub fn have_name(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        self.condition.have_name(pattern)
+    }
+
+    /// Forbids selected files whose containing folder matches `pattern`.
+    pub fn be_in_folder(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        self.condition.be_in_folder(pattern)
+    }
+
+    /// Forbids selected files whose complete normalized path matches `pattern`.
+    pub fn be_in_path(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        self.condition.be_in_path(pattern)
     }
 }
