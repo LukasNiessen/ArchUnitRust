@@ -4,8 +4,8 @@ use std::fmt;
 
 use crate::common::assertion::EmptyTestViolation;
 use crate::files::assertion::{
-    CycleViolation, ExternalModuleDependencyViolation, FileDependencyViolation,
-    FilePatternViolation,
+    CustomFileViolation, CycleViolation, ExternalModuleDependencyViolation,
+    FileDependencyViolation, FilePatternViolation,
 };
 
 /// The machine-readable family of a [`Violation`].
@@ -24,6 +24,8 @@ pub enum ViolationKind {
     FileDependency,
     /// An external crate dependency disagrees with an allowlist or denylist rule.
     ExternalModuleDependency,
+    /// A selected file disagrees with a user-defined predicate.
+    CustomFile,
 }
 
 impl ViolationKind {
@@ -36,6 +38,7 @@ impl ViolationKind {
             Self::FilePattern => "file-pattern",
             Self::FileDependency => "file-dependency",
             Self::ExternalModuleDependency => "external-module-dependency",
+            Self::CustomFile => "custom-file",
         }
     }
 }
@@ -63,6 +66,8 @@ pub enum Violation {
     FileDependency(FileDependencyViolation),
     /// An external crate dependency disagrees with a relational file rule.
     ExternalModuleDependency(ExternalModuleDependencyViolation),
+    /// A file disagrees with a user-defined predicate.
+    CustomFile(CustomFileViolation),
 }
 
 impl Violation {
@@ -75,6 +80,7 @@ impl Violation {
             Self::FilePattern(_) => ViolationKind::FilePattern,
             Self::FileDependency(_) => ViolationKind::FileDependency,
             Self::ExternalModuleDependency(_) => ViolationKind::ExternalModuleDependency,
+            Self::CustomFile(_) => ViolationKind::CustomFile,
         }
     }
 
@@ -86,7 +92,8 @@ impl Violation {
             Self::Cycle(_)
             | Self::FilePattern(_)
             | Self::FileDependency(_)
-            | Self::ExternalModuleDependency(_) => None,
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_) => None,
         }
     }
 
@@ -98,7 +105,8 @@ impl Violation {
             Self::EmptyTest(_)
             | Self::FilePattern(_)
             | Self::FileDependency(_)
-            | Self::ExternalModuleDependency(_) => None,
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_) => None,
         }
     }
 
@@ -110,7 +118,8 @@ impl Violation {
             Self::EmptyTest(_)
             | Self::Cycle(_)
             | Self::FileDependency(_)
-            | Self::ExternalModuleDependency(_) => None,
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_) => None,
         }
     }
 
@@ -122,7 +131,8 @@ impl Violation {
             Self::EmptyTest(_)
             | Self::Cycle(_)
             | Self::FilePattern(_)
-            | Self::ExternalModuleDependency(_) => None,
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_) => None,
         }
     }
 
@@ -136,7 +146,21 @@ impl Violation {
             Self::EmptyTest(_)
             | Self::Cycle(_)
             | Self::FilePattern(_)
-            | Self::FileDependency(_) => None,
+            | Self::FileDependency(_)
+            | Self::CustomFile(_) => None,
+        }
+    }
+
+    /// Returns the custom-file data when this is a custom predicate violation.
+    #[must_use]
+    pub const fn as_custom_file(&self) -> Option<&CustomFileViolation> {
+        match self {
+            Self::CustomFile(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_) => None,
         }
     }
 }
@@ -171,13 +195,19 @@ impl From<ExternalModuleDependencyViolation> for Violation {
     }
 }
 
+impl From<CustomFileViolation> for Violation {
+    fn from(violation: CustomFileViolation) -> Self {
+        Self::CustomFile(violation)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Violation, ViolationKind};
     use crate::{
-        CycleViolation, Edge, EmptyTestViolation, ExternalModuleDependencyViolation,
-        FileDependencyViolation, FilePatternViolation, Graph, ImportKind, ProjectedEdge,
-        RegexFactory, project_to_nodes,
+        CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
+        ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
+        Graph, ImportKind, ProjectedEdge, RegexFactory, project_to_nodes,
     };
 
     #[test]
@@ -211,6 +241,7 @@ mod tests {
         assert!(violation.as_file_pattern().is_none());
         assert!(violation.as_file_dependency().is_none());
         assert!(violation.as_external_module_dependency().is_none());
+        assert!(violation.as_custom_file().is_none());
     }
 
     #[test]
@@ -231,6 +262,7 @@ mod tests {
         assert!(violation.as_empty_test().is_none());
         assert!(violation.as_file_dependency().is_none());
         assert!(violation.as_external_module_dependency().is_none());
+        assert!(violation.as_custom_file().is_none());
     }
 
     #[test]
@@ -246,6 +278,7 @@ mod tests {
         assert!(violation.as_cycle().is_none());
         assert!(violation.as_empty_test().is_none());
         assert!(violation.as_external_module_dependency().is_none());
+        assert!(violation.as_custom_file().is_none());
     }
 
     #[test]
@@ -257,6 +290,26 @@ mod tests {
         assert_eq!(violation.kind(), ViolationKind::ExternalModuleDependency);
         assert_eq!(violation.kind().as_str(), "external-module-dependency");
         assert!(violation.as_external_module_dependency().is_some());
+        assert!(violation.as_file_dependency().is_none());
+        assert!(violation.as_file_pattern().is_none());
+        assert!(violation.as_cycle().is_none());
+        assert!(violation.as_empty_test().is_none());
+        assert!(violation.as_custom_file().is_none());
+    }
+
+    #[test]
+    fn custom_file_has_a_stable_kind_and_typed_accessor() {
+        let info = FileInfo::new("src/api.rs", "pub fn api() {}\n");
+        let violation = Violation::from(CustomFileViolation::new(
+            info,
+            "contain no public functions",
+            true,
+        ));
+
+        assert_eq!(violation.kind(), ViolationKind::CustomFile);
+        assert_eq!(violation.kind().as_str(), "custom-file");
+        assert!(violation.as_custom_file().is_some());
+        assert!(violation.as_external_module_dependency().is_none());
         assert!(violation.as_file_dependency().is_none());
         assert!(violation.as_file_pattern().is_none());
         assert!(violation.as_cycle().is_none());
