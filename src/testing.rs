@@ -1,5 +1,6 @@
 //! Framework-neutral architecture-test result formatting.
 
+mod assert_passes;
 mod color_utils;
 mod result_factory;
 mod test_result;
@@ -13,3 +14,6 @@ pub use test_result::TestResult;
 pub use test_result_options::TestResultOptions;
 pub use test_violation::TestViolation;
 pub use violation_factory::ViolationFactory;
+
+#[doc(hidden)]
+pub use assert_passes::evaluate_assertion;
