@@ -4,7 +4,7 @@ Architecture testing for Rust. Part of **ArchUnitEverything** — one architectu
 
 > Early development. Nothing to install yet.
 
-The first fluent file rule is usable as an ordinary Rust test value:
+A fluent file rule is usable as an ordinary Rust test value:
 
 ```rust
 use archunit::{Checkable, project_files};

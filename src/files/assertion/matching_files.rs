@@ -5,8 +5,8 @@ use super::FilePatternViolation;
 /// Judges selected files against one filename, folder, or path requirement.
 ///
 /// Positive rules report non-matches and negated rules report matches. An empty selection remains
-/// empty here; the shared terminal guard added by the Files API is responsible for reporting an
-/// empty test.
+/// empty here; the terminal layer, rather than this pure predicate, is responsible for reporting
+/// an empty test.
 #[must_use]
 pub fn gather_matching_file_violations(
     nodes: &[ProjectedNode],
