@@ -11,3 +11,4 @@ rewriting history after released behavior depends on it.
 - [0005: Guard selected subjects, not derived evidence](0005-guard-selected-subjects-not-derived-evidence.md)
 - [0006: Format closed violations in one testing layer](0006-format-closed-violations-in-one-testing-layer.md)
 - [0007: Use a thin assertion macro over a pure evaluator](0007-use-a-thin-assertion-macro-over-a-pure-evaluator.md)
+- [0008: Use the built-in harness without an adapter](0008-use-the-built-in-harness-without-an-adapter.md)

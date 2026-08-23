@@ -11,12 +11,15 @@ panics:
 ```rust,no_run
 use archunit::{assert_passes, project_files};
 
-let rule = project_files()
-    .in_folder("src/**")
-    .should()
-    .have_no_cycles();
+#[test]
+fn architecture_is_acyclic() {
+    let rule = project_files()
+        .in_folder("src/**")
+        .should()
+        .have_no_cycles();
 
-assert_passes!(rule);
+    assert_passes!(rule);
+}
 ```
 
 Rules are lazy: building this sentence reads no files. `assert_passes!` calls `check()`, locates the
@@ -112,9 +115,10 @@ thread-safe values.
 
 ## Testing and framework-neutral results
 
-`assert_passes!(rule)` and `assert_passes!(rule, check_options)` are the documented test fallback.
-They preserve both formatted architecture violations and classified check errors in the assertion
-message. No adapter setup is required.
+`assert_passes!(rule)` and `assert_passes!(rule, check_options)` are the native integration for
+ordinary `#[test]` functions. They preserve both formatted architecture violations and classified
+check errors in the assertion message. Rust's built-in harness has no adapter registry, so importing
+the macro is the complete setup.
 
 Violations remain structured data until that testing layer formats them. `ViolationFactory` owns
 the wording for every built-in violation; `ResultFactory` adds pass/fail semantics, numbering and
