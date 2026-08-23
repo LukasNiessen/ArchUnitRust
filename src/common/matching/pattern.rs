@@ -11,6 +11,8 @@ pub enum PatternSyntax {
     Glob,
     /// Rust [`regex`](https://docs.rs/regex) syntax.
     Regex,
+    /// Every character is matched literally.
+    Literal,
 }
 
 /// Pattern compilation options.
@@ -87,6 +89,29 @@ impl Pattern {
             return Err(PatternError::new(source, "regular expression is empty"));
         }
         Self::compile(source, PatternSyntax::Regex, source, options)
+    }
+
+    /// Compiles a complete literal string, including characters meaningful to globs and regexes.
+    pub fn literal(literal: impl AsRef<str>) -> Result<Self, PatternError> {
+        Self::literal_with(literal, PatternOptions::default())
+    }
+
+    /// Compiles a complete literal string with explicit options.
+    pub fn literal_with(
+        literal: impl AsRef<str>,
+        options: PatternOptions,
+    ) -> Result<Self, PatternError> {
+        let source = literal.as_ref();
+        let normalized = normalize_separators(source);
+        if normalized.is_empty() {
+            return Err(PatternError::new(source, "literal is empty"));
+        }
+        Self::compile(
+            source,
+            PatternSyntax::Literal,
+            &regex::escape(&normalized),
+            options,
+        )
     }
 
     /// Returns the pattern exactly as the user supplied it.
@@ -354,6 +379,16 @@ mod tests {
         assert!(regex.matches("api"));
         assert!(!glob.matches("src/api"));
         assert!(!regex.matches("src/api"));
+    }
+
+    #[test]
+    fn literal_patterns_escape_every_metacharacter() {
+        let pattern =
+            Pattern::literal(r"src\handler_v[1]+.rs").expect("fixture literal should compile");
+
+        assert!(pattern.matches("src/handler_v[1]+.rs"));
+        assert!(!pattern.matches("src/handler_v1.rs"));
+        assert_eq!(pattern.syntax(), PatternSyntax::Literal);
     }
 
     #[test]
