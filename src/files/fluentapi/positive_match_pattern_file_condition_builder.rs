@@ -1,6 +1,6 @@
 use crate::{Filter, PatternError, ProjectLocator};
 
-use super::{FileConditionBuilder, MatchPatternFileConditionBuilder};
+use super::{CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileConditionBuilder};
 
 /// The `should` mood for file predicates.
 #[derive(Debug, Clone)]
@@ -48,5 +48,10 @@ impl PositiveMatchPatternFileConditionBuilder {
     #[must_use]
     pub const fn selector_error(&self) -> Option<&PatternError> {
         self.condition.selector_error()
+    }
+
+    /// Requires the selected file dependency graph to contain no cycles.
+    pub fn have_no_cycles(self) -> CycleFreeFileCondition {
+        CycleFreeFileCondition::new(self.condition)
     }
 }

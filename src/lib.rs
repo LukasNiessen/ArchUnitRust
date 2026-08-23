@@ -4,7 +4,7 @@
 mod common;
 mod files;
 
-pub use common::assertion::{EmptyTestViolation, Violation, ViolationKind};
+pub use common::assertion::{CycleViolation, EmptyTestViolation, Violation, ViolationKind};
 pub use common::error::{ArchUnitError, TechnicalError, UserError};
 pub use common::extraction::{
     CargoProject, CargoTarget, CargoTargetKind, DEFAULT_EXCLUDED_DIRECTORIES, DependencyExtraction,
@@ -24,8 +24,9 @@ pub use common::projection::{
     ProjectedNode, identity, per_edge, per_external_edge, per_internal_edge, project_cycles,
     project_edges, project_internal_cycles, project_to_nodes, project_to_nodes_with_options,
 };
+pub use files::assertion::gather_cycle_violations;
 pub use files::fluentapi::{
-    FileConditionBuilder, MatchPatternFileConditionBuilder,
+    CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileConditionBuilder,
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
 };

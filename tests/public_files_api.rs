@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use archunit::{
-    NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder,
-    SourceOptions, extract_graph, files, files_in, locate_project_from, project_files,
-    project_files_in, project_to_nodes,
+    Checkable, CycleFreeFileCondition, NegatedMatchPatternFileConditionBuilder,
+    PositiveMatchPatternFileConditionBuilder, SourceOptions, ViolationKind, extract_graph, files,
+    files_in, locate_project_from, project_files, project_files_in, project_to_nodes,
 };
 
 fn matches_all(identifier: &str, filters: &[archunit::Filter]) -> bool {
@@ -81,4 +81,73 @@ fn should_and_should_not_are_distinct_thin_moods_over_shared_state() {
     );
     assert!(positive.selector_error().is_none());
     assert!(negative.selector_error().is_none());
+}
+
+#[test]
+fn have_no_cycles_reports_a_readable_path_from_the_rust_fixture() {
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
+    let rule: CycleFreeFileCondition = project_files_in(fixture).should().have_no_cycles();
+
+    let violations = rule.check().expect("fixture cycle rule should execute");
+    let cycle = violations
+        .iter()
+        .filter(|violation| violation.kind() == ViolationKind::Cycle)
+        .filter_map(archunit::Violation::as_cycle)
+        .find(|violation| {
+            violation.path
+                == [
+                    "crates/app/source/api.rs",
+                    "crates/app/source/api/model.rs",
+                    "crates/app/source/api.rs",
+                ]
+        })
+        .expect("the fixture's parent/model module cycle should be reported");
+
+    assert_eq!(
+        cycle.path.join(" -> "),
+        concat!(
+            "crates/app/source/api.rs -> ",
+            "crates/app/source/api/model.rs -> ",
+            "crates/app/source/api.rs"
+        )
+    );
+    assert!(
+        cycle
+            .cycle
+            .iter()
+            .all(|edge| !edge.cumulated_edges.is_empty())
+    );
+}
+
+#[test]
+fn have_no_cycles_checks_only_the_selected_files() {
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
+    let rule = project_files_in(fixture)
+        .in_file("crates/app/source/shared.rs")
+        .should()
+        .have_no_cycles();
+
+    assert!(
+        rule.check()
+            .expect("selected acyclic file should be checked")
+            .is_empty()
+    );
+}
+
+#[test]
+fn cycle_terminal_reports_selector_errors_before_project_location() {
+    let rule = project_files_in("definitely/missing/project")
+        .in_path("src/[api")
+        .should()
+        .have_no_cycles();
+
+    let error = rule
+        .check()
+        .expect_err("invalid selector should prevent the rule from running");
+
+    assert!(error.as_user().is_some());
+    assert!(error.to_string().contains("invalid selector"));
+    assert!(error.to_string().contains("src/[api"));
 }

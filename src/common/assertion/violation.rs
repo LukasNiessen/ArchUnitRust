@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::EmptyTestViolation;
+use super::{CycleViolation, EmptyTestViolation};
 
 /// The machine-readable family of a [`Violation`].
 ///
@@ -10,6 +10,8 @@ use super::EmptyTestViolation;
 pub enum ViolationKind {
     /// A selector matched no subject, so the rule judged nothing.
     EmptyTest,
+    /// The selected projected graph contains a circular dependency path.
+    Cycle,
 }
 
 impl ViolationKind {
@@ -18,6 +20,7 @@ impl ViolationKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::EmptyTest => "empty-test",
+            Self::Cycle => "cycle",
         }
     }
 }
@@ -37,6 +40,8 @@ impl fmt::Display for ViolationKind {
 pub enum Violation {
     /// The rule selected no subject and therefore could not judge its predicate.
     EmptyTest(EmptyTestViolation),
+    /// A circular path exists in the selected projected graph.
+    Cycle(CycleViolation),
 }
 
 impl Violation {
@@ -45,6 +50,7 @@ impl Violation {
     pub const fn kind(&self) -> ViolationKind {
         match self {
             Self::EmptyTest(_) => ViolationKind::EmptyTest,
+            Self::Cycle(_) => ViolationKind::Cycle,
         }
     }
 
@@ -53,6 +59,16 @@ impl Violation {
     pub const fn as_empty_test(&self) -> Option<&EmptyTestViolation> {
         match self {
             Self::EmptyTest(violation) => Some(violation),
+            Self::Cycle(_) => None,
+        }
+    }
+
+    /// Returns the cycle data when this is a cycle violation.
+    #[must_use]
+    pub const fn as_cycle(&self) -> Option<&CycleViolation> {
+        match self {
+            Self::Cycle(violation) => Some(violation),
+            Self::EmptyTest(_) => None,
         }
     }
 }
@@ -63,10 +79,16 @@ impl From<EmptyTestViolation> for Violation {
     }
 }
 
+impl From<CycleViolation> for Violation {
+    fn from(violation: CycleViolation) -> Self {
+        Self::Cycle(violation)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Violation, ViolationKind};
-    use crate::EmptyTestViolation;
+    use crate::{CycleViolation, EmptyTestViolation, ProjectedEdge};
 
     #[test]
     fn empty_test_has_a_stable_kind() {
@@ -86,5 +108,15 @@ mod tests {
             .expect("fixture should be an empty-test violation");
         assert_eq!(empty.subject, "slices");
         assert!(empty.selectors.is_empty());
+    }
+
+    #[test]
+    fn cycle_has_a_stable_kind_and_typed_accessor() {
+        let violation = Violation::from(CycleViolation::new(Vec::<ProjectedEdge>::new()));
+
+        assert_eq!(violation.kind(), ViolationKind::Cycle);
+        assert_eq!(violation.kind().as_str(), "cycle");
+        assert!(violation.as_cycle().is_some());
+        assert!(violation.as_empty_test().is_none());
     }
 }
