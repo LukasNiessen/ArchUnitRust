@@ -55,7 +55,7 @@ pub use graph::projection::{
 };
 pub use graph::rendering::{
     CsvRenderer, D2Renderer, DotRenderer, GraphRenderer, GraphReportFormat, HtmlRenderer,
-    JsonRenderer, MermaidRenderer,
+    JsonRenderer, MermaidRenderer, export_graph_report,
 };
 pub use layers::assertion::{
     LayerDefinition, LayerDependencyRule, LayerDependencyViolation,

@@ -1,6 +1,11 @@
-use crate::GraphReportSnapshot;
+use std::path::Path;
 
-use super::{CsvRenderer, D2Renderer, DotRenderer, HtmlRenderer, JsonRenderer, MermaidRenderer};
+use crate::{ArchUnitError, GraphReportSnapshot};
+
+use super::{
+    CsvRenderer, D2Renderer, DotRenderer, HtmlRenderer, JsonRenderer, MermaidRenderer,
+    export_graph_report,
+};
 
 /// A supported graph report output format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -72,6 +77,63 @@ impl GraphRenderer {
     #[must_use]
     pub fn to_html(snapshot: &GraphReportSnapshot) -> String {
         HtmlRenderer::render(snapshot)
+    }
+
+    /// Renders `snapshot` as `format` and writes it as UTF-8.
+    pub fn export(
+        snapshot: &GraphReportSnapshot,
+        format: GraphReportFormat,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::render(snapshot, format))
+    }
+
+    /// Exports Graphviz DOT as UTF-8.
+    pub fn export_as_dot(
+        snapshot: &GraphReportSnapshot,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::to_dot(snapshot))
+    }
+
+    /// Exports Mermaid flowchart source as UTF-8.
+    pub fn export_as_mermaid(
+        snapshot: &GraphReportSnapshot,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::to_mermaid(snapshot))
+    }
+
+    /// Exports D2 diagram source as UTF-8.
+    pub fn export_as_d2(
+        snapshot: &GraphReportSnapshot,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::to_d2(snapshot))
+    }
+
+    /// Exports aggregated dependency CSV as UTF-8.
+    pub fn export_as_csv(
+        snapshot: &GraphReportSnapshot,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::to_csv(snapshot))
+    }
+
+    /// Exports complete snapshot JSON as UTF-8.
+    pub fn export_as_json(
+        snapshot: &GraphReportSnapshot,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::to_json(snapshot))
+    }
+
+    /// Exports a self-contained offline HTML report as UTF-8.
+    pub fn export_as_html(
+        snapshot: &GraphReportSnapshot,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        export_graph_report(output_path, &Self::to_html(snapshot))
     }
 }
 

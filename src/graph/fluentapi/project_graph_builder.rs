@@ -1,8 +1,10 @@
+use std::path::Path;
+
 use crate::{
     ArchUnitError, CheckOptions, FolderDepthCollapse, GraphCollapse, GraphQueryError,
-    GraphQueryOptions, GraphReportSnapshot, GraphReportSummary, PatternCollapse, PatternError,
-    ProjectLocator, RegexFactory, UserError, create_graph_snapshot, extract_graph_with_options,
-    locate_project_from,
+    GraphQueryOptions, GraphRenderer, GraphReportFormat, GraphReportSnapshot, GraphReportSummary,
+    PatternCollapse, PatternError, ProjectLocator, RegexFactory, UserError, create_graph_snapshot,
+    extract_graph_with_options, locate_project_from,
 };
 
 /// Immutable query builder for dependency-graph snapshots and reports.
@@ -132,6 +134,82 @@ impl ProjectGraphBuilder {
     /// Extracts the project and returns only the queried snapshot counts.
     pub fn summary(&self) -> Result<GraphReportSummary, ArchUnitError> {
         self.snapshot().map(|snapshot| snapshot.summary)
+    }
+
+    /// Extracts once and renders the queried snapshot as `format`.
+    pub fn render(&self, format: GraphReportFormat) -> Result<String, ArchUnitError> {
+        self.snapshot()
+            .map(|snapshot| GraphRenderer::render(&snapshot, format))
+    }
+
+    /// Extracts once and renders Graphviz DOT.
+    pub fn to_dot(&self) -> Result<String, ArchUnitError> {
+        self.render(GraphReportFormat::Dot)
+    }
+
+    /// Extracts once and renders Mermaid flowchart source.
+    pub fn to_mermaid(&self) -> Result<String, ArchUnitError> {
+        self.render(GraphReportFormat::Mermaid)
+    }
+
+    /// Extracts once and renders D2 diagram source.
+    pub fn to_d2(&self) -> Result<String, ArchUnitError> {
+        self.render(GraphReportFormat::D2)
+    }
+
+    /// Extracts once and renders aggregated dependency CSV.
+    pub fn to_csv(&self) -> Result<String, ArchUnitError> {
+        self.render(GraphReportFormat::Csv)
+    }
+
+    /// Extracts once and renders complete snapshot JSON.
+    pub fn to_json(&self) -> Result<String, ArchUnitError> {
+        self.render(GraphReportFormat::Json)
+    }
+
+    /// Extracts once and renders a self-contained offline HTML report.
+    pub fn to_html(&self) -> Result<String, ArchUnitError> {
+        self.render(GraphReportFormat::Html)
+    }
+
+    /// Extracts once, renders `format`, and writes it as UTF-8.
+    pub fn export(
+        &self,
+        format: GraphReportFormat,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), ArchUnitError> {
+        let snapshot = self.snapshot()?;
+        GraphRenderer::export(&snapshot, format, output_path)
+    }
+
+    /// Extracts once and exports Graphviz DOT as UTF-8.
+    pub fn export_as_dot(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export(GraphReportFormat::Dot, output_path)
+    }
+
+    /// Extracts once and exports Mermaid flowchart source as UTF-8.
+    pub fn export_as_mermaid(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export(GraphReportFormat::Mermaid, output_path)
+    }
+
+    /// Extracts once and exports D2 diagram source as UTF-8.
+    pub fn export_as_d2(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export(GraphReportFormat::D2, output_path)
+    }
+
+    /// Extracts once and exports aggregated dependency CSV as UTF-8.
+    pub fn export_as_csv(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export(GraphReportFormat::Csv, output_path)
+    }
+
+    /// Extracts once and exports complete snapshot JSON as UTF-8.
+    pub fn export_as_json(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export(GraphReportFormat::Json, output_path)
+    }
+
+    /// Extracts once and exports a self-contained offline HTML report as UTF-8.
+    pub fn export_as_html(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export(GraphReportFormat::Html, output_path)
     }
 
     /// Returns where Cargo project discovery begins.
