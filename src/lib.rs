@@ -44,6 +44,9 @@ pub use files::fluentapi::{
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
 };
+pub use graph::fluentapi::{
+    ProjectGraphBuilder, dependency_graph, dependency_graph_in, project_graph, project_graph_in,
+};
 pub use graph::projection::{
     DEFAULT_GRAPH_TITLE, FolderDepthCollapse, GraphCollapse, GraphQueryError, GraphQueryOptions,
     GraphReportEdge, GraphReportNode, GraphReportSnapshot, GraphReportSummary,
