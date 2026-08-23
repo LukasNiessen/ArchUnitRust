@@ -30,6 +30,22 @@ fn has_internal_reference(
     })
 }
 
+fn has_external_reference(
+    extraction: &DependencyExtraction,
+    source: &str,
+    path: &str,
+    target: &str,
+    kind: ImportKind,
+) -> bool {
+    extraction.references().iter().any(|reference| {
+        reference.source() == source
+            && reference.referenced_path() == path
+            && reference.external_target() == Some(target)
+            && reference.kind() == kind
+            && reference.line() > 0
+    })
+}
+
 #[test]
 fn module_tree_resolves_outlined_inline_path_redirected_and_cfg_modules() {
     let extraction = extraction();
@@ -119,30 +135,147 @@ fn uses_aliases_and_qualified_paths_resolve_to_the_longest_module_prefix() {
         "crates/app/source/api/model.rs",
         ImportKind::Use
     ));
+    assert!(has_internal_reference(
+        &extraction,
+        "crates/app/source/library.rs",
+        "macro_tools",
+        "crates/macros/macro_src/entry.rs",
+        ImportKind::Use
+    ));
+    assert!(has_internal_reference(
+        &extraction,
+        "crates/app/source/library.rs",
+        "macros_alias::fixture",
+        "crates/macros/macro_src/entry.rs",
+        ImportKind::MacroReference
+    ));
 }
 
 #[test]
-fn external_syntax_remains_raw_for_cargo_aware_classification() {
+fn cargo_visible_names_classify_sysroot_and_registry_dependencies() {
     let extraction = extraction();
 
-    for (path, kind) in [
-        ("std::collections::HashMap", ImportKind::PathReference),
-        ("core::option::Option", ImportKind::PathReference),
-        ("proc_macro", ImportKind::ExternCrate),
-        ("tokio::join", ImportKind::MacroReference),
-        ("::std::vec::Vec", ImportKind::PathReference),
+    for (source, path, target, kind) in [
+        (
+            "crates/app/source/api.rs",
+            "std::collections::HashMap",
+            "std",
+            ImportKind::PathReference,
+        ),
+        (
+            "crates/app/source/api.rs",
+            "core::option::Option",
+            "core",
+            ImportKind::PathReference,
+        ),
+        (
+            "crates/app/source/library.rs",
+            "alloc::vec::Vec",
+            "alloc",
+            ImportKind::PathReference,
+        ),
+        (
+            "crates/app/source/library.rs",
+            "proc_macro",
+            "proc_macro",
+            ImportKind::ExternCrate,
+        ),
+        (
+            "crates/app/source/library.rs",
+            "tokio::join",
+            "tokio",
+            ImportKind::MacroReference,
+        ),
+        (
+            "crates/app/source/library.rs",
+            "::std::vec::Vec",
+            "std",
+            ImportKind::PathReference,
+        ),
+        (
+            "crates/app/source/library.rs",
+            "wire_format",
+            "wire_format",
+            ImportKind::Use,
+        ),
+        (
+            "crates/app/source/library.rs",
+            "serialization::Value",
+            "wire_format",
+            ImportKind::PathReference,
+        ),
     ] {
-        assert!(extraction.references().iter().any(|reference| {
-            reference.referenced_path() == path
-                && reference.internal_target().is_none()
-                && reference.kind() == kind
-        }));
+        assert!(has_external_reference(
+            &extraction,
+            source,
+            path,
+            target,
+            kind
+        ));
     }
     assert!(!extraction.references().iter().any(|reference| {
         reference
             .referenced_path()
             .contains("macro_tokens_are_not_expanded")
     }));
+}
+
+#[test]
+fn undeclared_first_segments_are_diagnostic_and_unclassified() {
+    let extraction = extraction();
+    let unknown = extraction
+        .references()
+        .iter()
+        .find(|reference| reference.referenced_path() == "ghost_dependency::Thing")
+        .expect("fixture should retain unknown syntax as diagnostic evidence");
+
+    assert!(unknown.target().is_none());
+    assert!(extraction.diagnostics().iter().any(|diagnostic| {
+        diagnostic.kind() == ExtractionDiagnosticKind::UnknownReference
+            && diagnostic.subject() == Some("ghost_dependency::Thing")
+    }));
+    assert_eq!(
+        extraction
+            .diagnostics()
+            .iter()
+            .filter(|diagnostic| diagnostic.kind() == ExtractionDiagnosticKind::UnknownReference)
+            .filter_map(|diagnostic| diagnostic.subject())
+            .collect::<Vec<_>>(),
+        ["ghost_dependency::Thing"]
+    );
+}
+
+#[test]
+fn dependency_kinds_follow_the_cargo_target_context() {
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
+    let project = locate_project_from(&ProjectLocator::from_path(fixture))
+        .expect("fixture workspace should be discoverable");
+    let production = extract_dependencies(&project, SourceOptions::default())
+        .expect("production extraction should complete");
+    let with_dev = extract_dependencies(&project, SourceOptions::new().with_dev_targets(true))
+        .expect("development extraction should complete");
+
+    assert!(has_external_reference(
+        &production,
+        "crates/app/build/custom.rs",
+        "build_only::compile",
+        "build_only",
+        ImportKind::PathReference
+    ));
+    assert!(
+        !production
+            .references()
+            .iter()
+            .any(|reference| reference.referenced_path().starts_with("dev_only"))
+    );
+    assert!(has_external_reference(
+        &with_dev,
+        "crates/app/qa/architecture.rs",
+        "dev_only::assert_eq",
+        "dev_only",
+        ImportKind::MacroReference
+    ));
 }
 
 #[test]

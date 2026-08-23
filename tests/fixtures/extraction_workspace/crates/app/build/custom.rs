@@ -1,1 +1,3 @@
-fn main() {}
+fn main() {
+    build_only::compile();
+}
