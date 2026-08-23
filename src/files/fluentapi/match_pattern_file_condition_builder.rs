@@ -1,8 +1,8 @@
-use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
+use crate::{FileInfo, Filter, PatternError, ProjectLocator, RegexFactory};
 
 use super::{
-    DependOnExternalModuleConditionBuilder, DependOnFileConditionBuilder, FileConditionBuilder,
-    MatchPatternFileCondition,
+    CustomFileCondition, DependOnExternalModuleConditionBuilder, DependOnFileConditionBuilder,
+    FileConditionBuilder, MatchPatternFileCondition,
 };
 
 /// Shared immutable state for positive and negated file-predicate builders.
@@ -76,6 +76,14 @@ impl MatchPatternFileConditionBuilder {
     /// Starts an external crate-dependency rule and enters its module-selector stage.
     pub fn depend_on_external_modules(self) -> DependOnExternalModuleConditionBuilder {
         DependOnExternalModuleConditionBuilder::new(self)
+    }
+
+    /// Judges every selected file with `predicate` and describes the requirement with `message`.
+    pub fn adhere_to<F>(self, predicate: F, message: impl Into<String>) -> CustomFileCondition
+    where
+        F: Fn(&FileInfo) -> bool + Send + Sync + 'static,
+    {
+        CustomFileCondition::new(self, predicate, message)
     }
 
     fn matching(self, check_filter: Result<Filter, PatternError>) -> MatchPatternFileCondition {
