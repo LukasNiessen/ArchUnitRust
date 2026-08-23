@@ -5,7 +5,10 @@ use crate::{
     project_edges,
 };
 
-use super::DependOnExternalModuleConditionBuilder;
+use super::{
+    DependOnExternalModuleConditionBuilder,
+    file_rule_support::{empty_selection_violation, selected_nodes},
+};
 
 /// Executable rule over dependencies from project files to external crates.
 #[derive(Debug, Clone)]
@@ -107,6 +110,16 @@ impl Checkable for DependOnExternalModuleCondition {
 
         let project = locate_project_from(self.project_locator())?;
         let extraction = extract_graph_with_options(&project, options)?;
+        let selected = selected_nodes(extraction.graph(), self.subject_filters());
+        if let Some(violation) = empty_selection_violation(
+            &selected,
+            self.subject_filters(),
+            self.is_negated(),
+            options,
+        ) {
+            return Ok(vec![violation]);
+        }
+
         let edges = project_edges(extraction.graph(), per_external_edge());
 
         Ok(gather_external_module_dependency_violations(

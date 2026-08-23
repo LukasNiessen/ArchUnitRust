@@ -7,6 +7,7 @@ mod depend_on_external_module_condition_builder;
 mod depend_on_file_condition;
 mod depend_on_file_condition_builder;
 mod file_condition_builder;
+mod file_rule_support;
 mod files;
 mod match_pattern_file_condition;
 mod match_pattern_file_condition_builder;

@@ -1,9 +1,10 @@
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, Graph,
-    MatchPatternFileConditionBuilder, PatternError, ProjectLocator, ProjectedNode, UserError,
-    extract_graph_with_options, gather_matching_file_violations, locate_project_from,
-    project_to_nodes,
+    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, MatchPatternFileConditionBuilder,
+    PatternError, ProjectLocator, UserError, extract_graph_with_options,
+    gather_matching_file_violations, locate_project_from,
 };
+
+use super::file_rule_support::{empty_selection_violation, selected_nodes};
 
 /// Executable filename, folder, or path predicate for selected files.
 #[derive(Debug, Clone)]
@@ -80,50 +81,16 @@ impl Checkable for MatchPatternFileCondition {
         let project = locate_project_from(self.project_locator())?;
         let extraction = extract_graph_with_options(&project, options)?;
         let selected = selected_nodes(extraction.graph(), self.filters());
+        if let Some(violation) =
+            empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
+        {
+            return Ok(vec![violation]);
+        }
 
         Ok(gather_matching_file_violations(
             &selected,
             check_filter,
             self.is_negated(),
         ))
-    }
-}
-
-fn selected_nodes(graph: &Graph, filters: &[Filter]) -> Vec<ProjectedNode> {
-    project_to_nodes(graph)
-        .into_iter()
-        .filter(|node| filters.iter().all(|filter| filter.matches(&node.label)))
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{Edge, Graph, RegexFactory};
-
-    use super::selected_nodes;
-
-    fn graph() -> Graph {
-        Graph::from_edges([
-            Edge::self_edge("src/orders/order_service.rs"),
-            Edge::self_edge("src/orders/order_repository.rs"),
-            Edge::self_edge("tests/orders/order_service_test.rs"),
-        ])
-    }
-
-    #[test]
-    fn scope_filters_select_nodes_with_and_semantics() {
-        let filters = [
-            RegexFactory::default()
-                .folder_matcher("src/**")
-                .expect("fixture pattern should compile"),
-            RegexFactory::default()
-                .filename_matcher("*_service.rs")
-                .expect("fixture pattern should compile"),
-        ];
-
-        let selected = selected_nodes(&graph(), &filters);
-
-        assert_eq!(selected.len(), 1);
-        assert_eq!(selected[0].label, "src/orders/order_service.rs");
     }
 }

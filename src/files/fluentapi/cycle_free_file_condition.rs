@@ -4,8 +4,10 @@ use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, Graph,
     MatchPatternFileConditionBuilder, PatternError, ProjectLocator, UserError,
     extract_graph_with_options, gather_cycle_violations, locate_project_from, per_internal_edge,
-    project_cycles, project_edges, project_to_nodes,
+    project_cycles, project_edges,
 };
+
+use super::file_rule_support::{empty_selection_violation, selected_nodes};
 
 /// Executable positive rule requiring the selected file graph to be acyclic.
 #[derive(Debug, Clone)]
@@ -49,18 +51,23 @@ impl Checkable for CycleFreeFileCondition {
 
         let project = locate_project_from(self.project_locator())?;
         let extraction = extract_graph_with_options(&project, options)?;
-        let selected = selected_labels(extraction.graph(), self.filters());
-        let cycles = cycles_within(extraction.graph(), &selected);
+        let selected = selected_nodes(extraction.graph(), self.filters());
+        if let Some(violation) = empty_selection_violation(
+            &selected,
+            self.filters(),
+            self.condition.is_negated(),
+            options,
+        ) {
+            return Ok(vec![violation]);
+        }
+
+        let labels = selected
+            .into_iter()
+            .map(|node| node.label)
+            .collect::<BTreeSet<_>>();
+        let cycles = cycles_within(extraction.graph(), &labels);
         Ok(gather_cycle_violations(cycles))
     }
-}
-
-fn selected_labels(graph: &Graph, filters: &[Filter]) -> BTreeSet<String> {
-    project_to_nodes(graph)
-        .into_iter()
-        .filter(|node| filters.iter().all(|filter| filter.matches(&node.label)))
-        .map(|node| node.label)
-        .collect()
 }
 
 fn cycles_within(graph: &Graph, selected: &BTreeSet<String>) -> crate::ProjectedCycles {
@@ -77,9 +84,9 @@ fn cycles_within(graph: &Graph, selected: &BTreeSet<String>) -> crate::Projected
 mod tests {
     use std::collections::BTreeSet;
 
-    use crate::{Edge, Graph, ImportKind, RegexFactory};
+    use crate::{Edge, Graph, ImportKind};
 
-    use super::{cycles_within, selected_labels};
+    use super::cycles_within;
 
     fn cyclic_graph() -> Graph {
         Graph::from_edges([
@@ -94,31 +101,14 @@ mod tests {
     #[test]
     fn detects_only_cycles_wholly_inside_the_selected_scope() {
         let graph = cyclic_graph();
-        let all = selected_labels(&graph, &[]);
-        let isolated_filter = RegexFactory::default()
-            .exact_file_matcher("src/isolated.rs")
-            .expect("fixture selector should compile");
-        let isolated = selected_labels(&graph, &[isolated_filter]);
+        let all = BTreeSet::from([
+            "src/api.rs".to_owned(),
+            "src/domain.rs".to_owned(),
+            "src/isolated.rs".to_owned(),
+        ]);
+        let isolated = BTreeSet::from(["src/isolated.rs".to_owned()]);
 
         assert_eq!(cycles_within(&graph, &all).len(), 1);
         assert!(cycles_within(&graph, &isolated).is_empty());
-    }
-
-    #[test]
-    fn selected_labels_use_and_semantics() {
-        let graph = cyclic_graph();
-        let filters = [
-            RegexFactory::default()
-                .path_matcher("src/**")
-                .expect("fixture path selector should compile"),
-            RegexFactory::default()
-                .filename_matcher("api.rs")
-                .expect("fixture filename selector should compile"),
-        ];
-
-        assert_eq!(
-            selected_labels(&graph, &filters),
-            BTreeSet::from(["src/api.rs".to_owned()])
-        );
     }
 }
