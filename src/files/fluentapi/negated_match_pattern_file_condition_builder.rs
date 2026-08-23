@@ -1,8 +1,8 @@
 use crate::{Filter, PatternError, ProjectLocator};
 
 use super::{
-    DependOnFileConditionBuilder, FileConditionBuilder, MatchPatternFileCondition,
-    MatchPatternFileConditionBuilder,
+    DependOnExternalModuleConditionBuilder, DependOnFileConditionBuilder, FileConditionBuilder,
+    MatchPatternFileCondition, MatchPatternFileConditionBuilder,
 };
 
 /// The `should_not` mood for file predicates.
@@ -71,5 +71,10 @@ impl NegatedMatchPatternFileConditionBuilder {
     /// Starts a denylist rule over dependencies from the selected files.
     pub fn depend_on_files(self) -> DependOnFileConditionBuilder {
         self.condition.depend_on_files()
+    }
+
+    /// Starts a denylist rule over external crate dependencies from the selected files.
+    pub fn depend_on_external_modules(self) -> DependOnExternalModuleConditionBuilder {
+        self.condition.depend_on_external_modules()
     }
 }

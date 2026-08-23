@@ -3,7 +3,10 @@
 use std::fmt;
 
 use crate::common::assertion::EmptyTestViolation;
-use crate::files::assertion::{CycleViolation, FileDependencyViolation, FilePatternViolation};
+use crate::files::assertion::{
+    CycleViolation, ExternalModuleDependencyViolation, FileDependencyViolation,
+    FilePatternViolation,
+};
 
 /// The machine-readable family of a [`Violation`].
 ///
@@ -19,6 +22,8 @@ pub enum ViolationKind {
     FilePattern,
     /// An internal file dependency disagrees with an allowlist or denylist rule.
     FileDependency,
+    /// An external crate dependency disagrees with an allowlist or denylist rule.
+    ExternalModuleDependency,
 }
 
 impl ViolationKind {
@@ -30,6 +35,7 @@ impl ViolationKind {
             Self::Cycle => "cycle",
             Self::FilePattern => "file-pattern",
             Self::FileDependency => "file-dependency",
+            Self::ExternalModuleDependency => "external-module-dependency",
         }
     }
 }
@@ -55,6 +61,8 @@ pub enum Violation {
     FilePattern(FilePatternViolation),
     /// An internal dependency disagrees with a relational file rule.
     FileDependency(FileDependencyViolation),
+    /// An external crate dependency disagrees with a relational file rule.
+    ExternalModuleDependency(ExternalModuleDependencyViolation),
 }
 
 impl Violation {
@@ -66,6 +74,7 @@ impl Violation {
             Self::Cycle(_) => ViolationKind::Cycle,
             Self::FilePattern(_) => ViolationKind::FilePattern,
             Self::FileDependency(_) => ViolationKind::FileDependency,
+            Self::ExternalModuleDependency(_) => ViolationKind::ExternalModuleDependency,
         }
     }
 
@@ -74,7 +83,10 @@ impl Violation {
     pub const fn as_empty_test(&self) -> Option<&EmptyTestViolation> {
         match self {
             Self::EmptyTest(violation) => Some(violation),
-            Self::Cycle(_) | Self::FilePattern(_) | Self::FileDependency(_) => None,
+            Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_) => None,
         }
     }
 
@@ -83,7 +95,10 @@ impl Violation {
     pub const fn as_cycle(&self) -> Option<&CycleViolation> {
         match self {
             Self::Cycle(violation) => Some(violation),
-            Self::EmptyTest(_) | Self::FilePattern(_) | Self::FileDependency(_) => None,
+            Self::EmptyTest(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_) => None,
         }
     }
 
@@ -92,7 +107,10 @@ impl Violation {
     pub const fn as_file_pattern(&self) -> Option<&FilePatternViolation> {
         match self {
             Self::FilePattern(violation) => Some(violation),
-            Self::EmptyTest(_) | Self::Cycle(_) | Self::FileDependency(_) => None,
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_) => None,
         }
     }
 
@@ -101,7 +119,24 @@ impl Violation {
     pub const fn as_file_dependency(&self) -> Option<&FileDependencyViolation> {
         match self {
             Self::FileDependency(violation) => Some(violation),
-            Self::EmptyTest(_) | Self::Cycle(_) | Self::FilePattern(_) => None,
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::ExternalModuleDependency(_) => None,
+        }
+    }
+
+    /// Returns the external-module data when this is an external-module dependency violation.
+    #[must_use]
+    pub const fn as_external_module_dependency(
+        &self,
+    ) -> Option<&ExternalModuleDependencyViolation> {
+        match self {
+            Self::ExternalModuleDependency(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_) => None,
         }
     }
 }
@@ -130,12 +165,19 @@ impl From<FileDependencyViolation> for Violation {
     }
 }
 
+impl From<ExternalModuleDependencyViolation> for Violation {
+    fn from(violation: ExternalModuleDependencyViolation) -> Self {
+        Self::ExternalModuleDependency(violation)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Violation, ViolationKind};
     use crate::{
-        CycleViolation, Edge, EmptyTestViolation, FileDependencyViolation, FilePatternViolation,
-        Graph, ImportKind, ProjectedEdge, RegexFactory, project_to_nodes,
+        CycleViolation, Edge, EmptyTestViolation, ExternalModuleDependencyViolation,
+        FileDependencyViolation, FilePatternViolation, Graph, ImportKind, ProjectedEdge,
+        RegexFactory, project_to_nodes,
     };
 
     #[test]
@@ -168,6 +210,7 @@ mod tests {
         assert!(violation.as_empty_test().is_none());
         assert!(violation.as_file_pattern().is_none());
         assert!(violation.as_file_dependency().is_none());
+        assert!(violation.as_external_module_dependency().is_none());
     }
 
     #[test]
@@ -187,6 +230,7 @@ mod tests {
         assert!(violation.as_cycle().is_none());
         assert!(violation.as_empty_test().is_none());
         assert!(violation.as_file_dependency().is_none());
+        assert!(violation.as_external_module_dependency().is_none());
     }
 
     #[test]
@@ -198,6 +242,22 @@ mod tests {
         assert_eq!(violation.kind(), ViolationKind::FileDependency);
         assert_eq!(violation.kind().as_str(), "file-dependency");
         assert!(violation.as_file_dependency().is_some());
+        assert!(violation.as_file_pattern().is_none());
+        assert!(violation.as_cycle().is_none());
+        assert!(violation.as_empty_test().is_none());
+        assert!(violation.as_external_module_dependency().is_none());
+    }
+
+    #[test]
+    fn external_module_dependency_has_a_stable_kind_and_typed_accessor() {
+        let raw = Edge::new("src/api.rs", "tokio", true, [ImportKind::MacroReference]);
+        let edge = ProjectedEdge::new("src/api.rs", "tokio", [raw]);
+        let violation = Violation::from(ExternalModuleDependencyViolation::new(edge, false));
+
+        assert_eq!(violation.kind(), ViolationKind::ExternalModuleDependency);
+        assert_eq!(violation.kind().as_str(), "external-module-dependency");
+        assert!(violation.as_external_module_dependency().is_some());
+        assert!(violation.as_file_dependency().is_none());
         assert!(violation.as_file_pattern().is_none());
         assert!(violation.as_cycle().is_none());
         assert!(violation.as_empty_test().is_none());
