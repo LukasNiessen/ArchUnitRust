@@ -1,0 +1,18 @@
+[package]
+name = "archunit"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.85"
+description = "Architecture testing for Rust"
+repository = "https://github.com/LukasNiessen/ArchUnitRust"
+license = "MIT"
+readme = "README.md"
+keywords = ["architecture", "testing", "dependencies", "static-analysis"]
+categories = ["development-tools::testing"]
+
+[lib]
+path = "src/lib.rs"
+
+[lints.rust]
+unsafe_code = "forbid"
+
