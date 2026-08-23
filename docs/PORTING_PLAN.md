@@ -119,6 +119,14 @@ containing module, then crate-root modules and Cargo's external prelude accordin
 edition. Ambiguous unqualified paths are not guessed: they produce an extraction diagnostic and are
 omitted from the dependency graph.
 
+One declaration can be suppressed with `// archunit: ignore` on the declaration line or the
+immediately preceding line. An optional Rust path scopes the directive, for example
+`// archunit: ignore crate::legacy`; scoped paths match exactly or by `::` prefix within a grouped
+import. The initial contract applies only to `use`, `pub use`, `extern crate`, and `mod`
+declarations. It deliberately does not suppress separate qualified-path syntax, whose comment/span
+attachment would be ambiguous. Ignored imports still participate in alias resolution so later,
+non-ignored qualified paths retain Rust semantics.
+
 ### Conservative boundary
 
 The first extractor uses `cargo metadata` plus `syn`; it does not embed rustc or rust-analyzer. The
