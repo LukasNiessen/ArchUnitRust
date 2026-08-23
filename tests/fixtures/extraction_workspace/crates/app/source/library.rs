@@ -32,6 +32,8 @@ pub use crate::api::{self as public_api, Handler};
 use crate::shared::{self, value as shared_value};
 
 extern crate proc_macro as tokens;
+use macro_tools as macros_alias;
+use wire_format as serialization;
 
 pub fn library_value() -> usize {
     use crate::api::model::Model as BlockModel;
@@ -39,8 +41,12 @@ pub fn library_value() -> usize {
     let _block_model: BlockModel = BlockModel;
     let _model: public_api::model::Model = public_api::model::Model;
     let _absolute: ::std::vec::Vec<usize> = ::std::vec::Vec::new();
+    let _allocated: alloc::vec::Vec<usize> = alloc::vec::Vec::new();
+    let _wire: serialization::Value = wire_format::Value;
+    let _unknown: ghost_dependency::Thing;
     let _storage = crate::storage::load();
     let _platform = crate::platform::value();
+    macros_alias::fixture!();
     tokio::join!(crate::macro_tokens_are_not_expanded::work());
     include!(concat!(env!("OUT_DIR"), "/generated.rs"));
     shared_value() + shared::value()

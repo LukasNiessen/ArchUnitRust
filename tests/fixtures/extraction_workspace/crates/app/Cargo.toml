@@ -23,3 +23,14 @@ path = "samples/demo.rs"
 name = "speed"
 path = "perf/speed.rs"
 harness = false
+
+[dependencies]
+macro-tools = { package = "fixture-macros", path = "../macros" }
+tokio = "1"
+wire-format = { package = "serde", version = "1" }
+
+[dev-dependencies]
+dev-only = { package = "pretty_assertions", version = "1" }
+
+[build-dependencies]
+build-only = { package = "cc", version = "1" }
