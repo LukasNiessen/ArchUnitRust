@@ -105,7 +105,7 @@ files/
 is what lets you test them against hand-built fixture graphs before the extractor works at all, and
 you should.
 
-Four dependency rules, which are just the library's own architecture rules:
+Five dependency rules, which are just the library's own architecture rules:
 
 1. `common` depends on nothing but the standard library and the Rust analysis toolchain.
 2. Domain modules depend on `common`. **They must not depend on each other.**
