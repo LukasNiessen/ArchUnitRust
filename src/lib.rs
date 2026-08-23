@@ -28,7 +28,8 @@ pub use common::projection::{
     project_edges, project_internal_cycles, project_to_nodes, project_to_nodes_with_options,
 };
 pub use files::assertion::{
-    CycleViolation, FileDependencyViolation, FilePatternViolation, gather_cycle_violations,
+    CycleViolation, ExternalModuleDependencyViolation, FileDependencyViolation,
+    FilePatternViolation, gather_cycle_violations, gather_external_module_dependency_violations,
     gather_file_dependency_violations, gather_matching_file_violations,
 };
 pub use files::fluentapi::{
