@@ -12,3 +12,4 @@ rewriting history after released behavior depends on it.
 - [0006: Format closed violations in one testing layer](0006-format-closed-violations-in-one-testing-layer.md)
 - [0007: Use a thin assertion macro over a pure evaluator](0007-use-a-thin-assertion-macro-over-a-pure-evaluator.md)
 - [0008: Use the built-in harness without an adapter](0008-use-the-built-in-harness-without-an-adapter.md)
+- [0009: Model layers as a lazy file-graph policy](0009-model-layers-as-a-lazy-file-graph-policy.md)

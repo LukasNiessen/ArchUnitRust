@@ -4,6 +4,7 @@
 mod checkable;
 mod common;
 mod files;
+mod layers;
 mod testing;
 mod violation;
 
@@ -41,6 +42,14 @@ pub use files::fluentapi::{
     FileConditionBuilder, MatchPatternFileCondition, MatchPatternFileConditionBuilder,
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
+};
+pub use layers::assertion::{
+    LayerDefinition, LayerDependencyRule, LayerDependencyViolation,
+    gather_layer_dependency_violations,
+};
+pub use layers::fluentapi::{
+    LayerDefinitionBuilder, LayerDependencyRuleBuilder, LayeredArchitecture, layers, layers_in,
+    project_layers, project_layers_in,
 };
 pub use testing::{
     ColorChoice, ColorUtils, ResultFactory, TestResult, TestResultOptions, TestViolation,
