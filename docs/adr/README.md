@@ -9,3 +9,4 @@ rewriting history after released behavior depends on it.
 - [0003: Aggregate closed violations above domains](0003-aggregate-closed-violations-above-domains.md)
 - [0004: Store custom file predicates as thread-safe values](0004-store-custom-file-predicates-as-thread-safe-values.md)
 - [0005: Guard selected subjects, not derived evidence](0005-guard-selected-subjects-not-derived-evidence.md)
+- [0006: Format closed violations in one testing layer](0006-format-closed-violations-in-one-testing-layer.md)
