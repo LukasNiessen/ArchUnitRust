@@ -1,6 +1,6 @@
-use crate::{Filter, PatternError, ProjectLocator};
+use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
 
-use super::FileConditionBuilder;
+use super::{FileConditionBuilder, MatchPatternFileCondition};
 
 /// Shared immutable state for positive and negated file-predicate builders.
 ///
@@ -46,6 +46,28 @@ impl MatchPatternFileConditionBuilder {
     pub const fn selector_error(&self) -> Option<&PatternError> {
         self.scope.selector_error()
     }
+
+    /// Requires every selected file's final path segment to match `pattern`.
+    pub fn have_name(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        let check_filter = RegexFactory::default().filename_matcher(pattern);
+        self.matching(check_filter)
+    }
+
+    /// Requires every selected file's containing folder to match `pattern`.
+    pub fn be_in_folder(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        let check_filter = RegexFactory::default().folder_matcher(pattern);
+        self.matching(check_filter)
+    }
+
+    /// Requires every selected file's complete normalized path to match `pattern`.
+    pub fn be_in_path(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        let check_filter = RegexFactory::default().path_matcher(pattern);
+        self.matching(check_filter)
+    }
+
+    fn matching(self, check_filter: Result<Filter, PatternError>) -> MatchPatternFileCondition {
+        MatchPatternFileCondition::new(self, check_filter)
+    }
 }
 
 #[cfg(test)]
@@ -81,6 +103,32 @@ mod tests {
         assert_eq!(
             mood.selector_error().map(|error| error.pattern()),
             Some("src/[api")
+        );
+    }
+
+    #[test]
+    fn creates_all_three_predicates_with_the_shared_mood() {
+        let scope = project_files_in("examples/layered").in_path("src/**");
+        let named =
+            MatchPatternFileConditionBuilder::new(scope.clone(), false).have_name("*_service.rs");
+        let folder =
+            MatchPatternFileConditionBuilder::new(scope.clone(), true).be_in_folder("src/service");
+        let path = MatchPatternFileConditionBuilder::new(scope, false).be_in_path("src/**");
+
+        assert!(!named.is_negated());
+        assert!(folder.is_negated());
+        assert!(!path.is_negated());
+        assert_eq!(
+            named.check_filter().map(|filter| filter.target()),
+            Some(crate::PatternTarget::Filename)
+        );
+        assert_eq!(
+            folder.check_filter().map(|filter| filter.target()),
+            Some(crate::PatternTarget::PathWithoutFilename)
+        );
+        assert_eq!(
+            path.check_filter().map(|filter| filter.target()),
+            Some(crate::PatternTarget::Path)
         );
     }
 }

@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use archunit::{
-    Checkable, CycleFreeFileCondition, NegatedMatchPatternFileConditionBuilder,
+    Checkable, CycleFreeFileCondition, MatchPatternFileCondition,
+    NegatedMatchPatternFileConditionBuilder, PatternTarget,
     PositiveMatchPatternFileConditionBuilder, SourceOptions, ViolationKind, extract_graph, files,
     files_in, locate_project_from, project_files, project_files_in, project_to_nodes,
 };
@@ -150,4 +151,144 @@ fn cycle_terminal_reports_selector_errors_before_project_location() {
     assert!(error.as_user().is_some());
     assert!(error.to_string().contains("invalid selector"));
     assert!(error.to_string().contains("src/[api"));
+}
+
+#[test]
+fn name_and_location_predicates_report_both_moods_on_a_real_rust_project() {
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
+    let api_file = "crates/app/source/api.rs";
+    let rules: [(MatchPatternFileCondition, PatternTarget, bool); 6] = [
+        (
+            project_files_in(fixture.clone())
+                .in_file(api_file)
+                .should()
+                .have_name("model.rs"),
+            PatternTarget::Filename,
+            false,
+        ),
+        (
+            project_files_in(fixture.clone())
+                .in_file(api_file)
+                .should_not()
+                .have_name("api.rs"),
+            PatternTarget::Filename,
+            true,
+        ),
+        (
+            project_files_in(fixture.clone())
+                .in_file(api_file)
+                .should()
+                .be_in_folder("crates/app/source/api"),
+            PatternTarget::PathWithoutFilename,
+            false,
+        ),
+        (
+            project_files_in(fixture.clone())
+                .in_file(api_file)
+                .should_not()
+                .be_in_folder("crates/app/source"),
+            PatternTarget::PathWithoutFilename,
+            true,
+        ),
+        (
+            project_files_in(fixture.clone())
+                .in_file(api_file)
+                .should()
+                .be_in_path("crates/app/source/api/model.rs"),
+            PatternTarget::Path,
+            false,
+        ),
+        (
+            project_files_in(fixture)
+                .in_file(api_file)
+                .should_not()
+                .be_in_path(api_file),
+            PatternTarget::Path,
+            true,
+        ),
+    ];
+
+    for (rule, expected_target, expected_mood) in rules {
+        let violations = rule
+            .check()
+            .expect("fixture file-pattern rule should execute");
+        let violation = violations
+            .first()
+            .and_then(archunit::Violation::as_file_pattern)
+            .expect("the selected file should disagree with the predicate");
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violation.projected_node.label, api_file);
+        assert_eq!(violation.check_filter.target(), expected_target);
+        assert_eq!(violation.is_negated, expected_mood);
+    }
+}
+
+#[test]
+fn name_and_location_predicates_pass_when_every_selected_file_agrees() {
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
+    let api_file = "crates/app/source/api.rs";
+    let rules = [
+        project_files_in(fixture.clone())
+            .in_file(api_file)
+            .should()
+            .have_name("api.rs"),
+        project_files_in(fixture.clone())
+            .in_file(api_file)
+            .should()
+            .be_in_folder("crates/app/source"),
+        project_files_in(fixture.clone())
+            .in_file(api_file)
+            .should()
+            .be_in_path(api_file),
+        project_files_in(fixture)
+            .in_file(api_file)
+            .should_not()
+            .have_name("model.rs"),
+    ];
+
+    for rule in rules {
+        assert!(
+            rule.check()
+                .expect("fixture file-pattern rule should execute")
+                .is_empty()
+        );
+    }
+}
+
+#[test]
+fn predicate_errors_are_user_errors_before_project_location() {
+    let rule = project_files_in("definitely/missing/project")
+        .should()
+        .have_name("[broken");
+
+    let error = rule
+        .check()
+        .expect_err("invalid predicate should prevent project discovery");
+
+    assert!(error.as_user().is_some());
+    assert!(error.to_string().contains("file predicate"));
+    assert!(error.to_string().contains("[broken"));
+}
+
+#[test]
+fn the_first_invalid_pattern_follows_sentence_order() {
+    let rule = project_files_in("definitely/missing/project")
+        .in_path("src/[scope")
+        .should()
+        .be_in_path("src/[predicate");
+
+    let retained = rule
+        .selector_error()
+        .expect("the first invalid pattern should remain inspectable");
+    let error = rule
+        .check()
+        .expect_err("invalid scope should prevent project discovery");
+
+    assert_eq!(retained.pattern(), "src/[scope");
+    assert!(error.to_string().contains("file scope"));
+    assert!(error.to_string().contains("src/[scope"));
+    assert!(!error.to_string().contains("src/[predicate"));
 }

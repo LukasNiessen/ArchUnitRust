@@ -1,6 +1,9 @@
 use crate::{Filter, PatternError, ProjectLocator};
 
-use super::{CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileConditionBuilder};
+use super::{
+    CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileCondition,
+    MatchPatternFileConditionBuilder,
+};
 
 /// The `should` mood for file predicates.
 #[derive(Debug, Clone)]
@@ -53,5 +56,20 @@ impl PositiveMatchPatternFileConditionBuilder {
     /// Requires the selected file dependency graph to contain no cycles.
     pub fn have_no_cycles(self) -> CycleFreeFileCondition {
         CycleFreeFileCondition::new(self.condition)
+    }
+
+    /// Requires every selected file's final path segment to match `pattern`.
+    pub fn have_name(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        self.condition.have_name(pattern)
+    }
+
+    /// Requires every selected file's containing folder to match `pattern`.
+    pub fn be_in_folder(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        self.condition.be_in_folder(pattern)
+    }
+
+    /// Requires every selected file's complete normalized path to match `pattern`.
+    pub fn be_in_path(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+        self.condition.be_in_path(pattern)
     }
 }
