@@ -18,6 +18,7 @@ dependencies = [
  "cargo_metadata",
  "proc-macro2",
  "regex",
+ "serde_json",
  "syn 2.0.119",
  "thiserror 2.0.20",
 ]
