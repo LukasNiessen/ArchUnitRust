@@ -25,7 +25,6 @@ impl MatchPatternFileCondition {
     }
 
     /// Returns the selected scope and mood carried into this terminal.
-    #[must_use]
     pub const fn condition(&self) -> &MatchPatternFileConditionBuilder {
         &self.condition
     }
