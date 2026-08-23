@@ -27,7 +27,9 @@ pub use common::projection::{
     ProjectedNode, identity, per_edge, per_external_edge, per_internal_edge, project_cycles,
     project_edges, project_internal_cycles, project_to_nodes, project_to_nodes_with_options,
 };
-pub use files::assertion::{CycleViolation, gather_cycle_violations};
+pub use files::assertion::{
+    CycleViolation, FilePatternViolation, gather_cycle_violations, gather_matching_file_violations,
+};
 pub use files::fluentapi::{
     CycleFreeFileCondition, FileConditionBuilder, MatchPatternFileConditionBuilder,
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
