@@ -18,3 +18,7 @@ pub use common::matching::{
     Filter, Pattern, PatternError, PatternOptions, PatternSyntax, PatternTarget, RegexFactory,
     RegexFactoryOptions,
 };
+pub use common::projection::{
+    MapFunction, MappedEdge, NodeProjectionOptions, ProjectedEdge, ProjectedGraph, ProjectedNode,
+    project_edges, project_to_nodes, project_to_nodes_with_options,
+};
