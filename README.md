@@ -20,6 +20,23 @@ let _: &dyn Checkable = &rule;
 Rules are lazy: building this sentence reads no files. Calling `check()` locates the Cargo project,
 extracts its dependency graph, and returns one data-carrying cycle violation per circular path.
 
+A scope that selects no files returns one typed `EmptyTestViolation` by default; it never silently
+passes because a path was misspelled or became stale. This guard applies to every terminal and
+checks selected files rather than dependency edges, so an existing isolated file is not considered
+empty. Intentional empty scopes require an explicit per-check opt-out:
+
+```rust,no_run
+use archunit::{CheckOptions, Checkable, project_files};
+
+let optional_rule = project_files()
+    .in_folder("generated/**")
+    .should()
+    .have_no_cycles();
+let options = CheckOptions::new().with_allow_empty_tests(true);
+
+let _ = optional_rule.check_with(&options);
+```
+
 The same scope and mood grammar applies to file naming and placement. All three predicates support
 both `should()` and `should_not()`:
 
