@@ -4,7 +4,10 @@ use crate::{
     locate_project_from, per_internal_edge, project_edges,
 };
 
-use super::DependOnFileConditionBuilder;
+use super::{
+    DependOnFileConditionBuilder,
+    file_rule_support::{empty_selection_violation, selected_nodes},
+};
 
 /// Executable rule over dependencies between project files.
 #[derive(Debug, Clone)]
@@ -116,6 +119,16 @@ impl Checkable for DependOnFileCondition {
 
         let project = locate_project_from(self.project_locator())?;
         let extraction = extract_graph_with_options(&project, options)?;
+        let selected = selected_nodes(extraction.graph(), self.subject_filters());
+        if let Some(violation) = empty_selection_violation(
+            &selected,
+            self.subject_filters(),
+            self.is_negated(),
+            options,
+        ) {
+            return Ok(vec![violation]);
+        }
+
         let edges = project_edges(extraction.graph(), per_internal_edge());
 
         Ok(gather_file_dependency_violations(

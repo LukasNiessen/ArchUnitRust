@@ -3,7 +3,7 @@ use crate::Filter;
 /// A rule selected no subject and therefore judged nothing.
 ///
 /// Zero matches is a violation by default because a stale or misspelled selector would otherwise
-/// pass forever. The terminal guard that emits this value is implemented in issue #23.
+/// pass forever.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct EmptyTestViolation {
@@ -11,15 +11,28 @@ pub struct EmptyTestViolation {
     pub subject: String,
     /// The selectors that, taken together, matched nothing, in fluent-chain order.
     pub selectors: Vec<Filter>,
+    /// Whether the empty selection occurred in a negated rule.
+    pub is_negated: bool,
 }
 
 impl EmptyTestViolation {
     /// Records the subject and selectors that matched nothing.
     #[must_use]
     pub fn new(subject: impl Into<String>, selectors: impl IntoIterator<Item = Filter>) -> Self {
+        Self::new_with_mood(subject, selectors, false)
+    }
+
+    /// Records the subject, selectors and fluent mood that matched nothing.
+    #[must_use]
+    pub fn new_with_mood(
+        subject: impl Into<String>,
+        selectors: impl IntoIterator<Item = Filter>,
+        is_negated: bool,
+    ) -> Self {
         Self {
             subject: subject.into(),
             selectors: selectors.into_iter().collect(),
+            is_negated,
         }
     }
 }
@@ -43,6 +56,7 @@ mod tests {
 
         assert_eq!(violation.subject, "files");
         assert_eq!(violation.selectors.len(), 2);
+        assert!(!violation.is_negated);
         assert_eq!(
             violation.selectors[0].pattern().source(),
             folder.pattern().source()
@@ -72,5 +86,12 @@ mod tests {
 
         assert_eq!(violation.subject, "project files");
         assert!(violation.selectors.is_empty());
+    }
+
+    #[test]
+    fn explicit_constructor_retains_the_negated_mood() {
+        let violation = EmptyTestViolation::new_with_mood("files", [], true);
+
+        assert!(violation.is_negated);
     }
 }

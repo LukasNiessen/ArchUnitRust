@@ -4,10 +4,11 @@ use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, FileInfo, FilePredicate, Filter,
     MatchPatternFileConditionBuilder, PatternError, ProjectLocator, UserError,
     extract_graph_with_options, gather_custom_file_violations, locate_project_from,
-    project_to_nodes,
 };
 
 use crate::files::extraction::extract_file_info;
+
+use super::file_rule_support::{empty_selection_violation, selected_nodes};
 
 /// Executable rule that judges selected source files with a user-defined predicate.
 #[derive(Clone)]
@@ -101,13 +102,15 @@ impl Checkable for CustomFileCondition {
 
         let project = locate_project_from(self.project_locator())?;
         let extraction = extract_graph_with_options(&project, options)?;
-        let file_infos = project_to_nodes(extraction.graph())
+        let selected = selected_nodes(extraction.graph(), self.filters());
+        if let Some(violation) =
+            empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
+        {
+            return Ok(vec![violation]);
+        }
+
+        let file_infos = selected
             .into_iter()
-            .filter(|node| {
-                self.filters()
-                    .iter()
-                    .all(|filter| filter.matches(&node.label))
-            })
             .map(|node| extract_file_info(&project, &node.label))
             .collect::<Result<Vec<_>, _>>()?;
 

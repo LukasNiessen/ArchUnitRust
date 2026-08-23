@@ -7,7 +7,7 @@ mod files;
 mod violation;
 
 pub use checkable::{CheckResult, Checkable};
-pub use common::assertion::EmptyTestViolation;
+pub use common::assertion::{EmptyTestViolation, gather_empty_test_violations};
 pub use common::error::{ArchUnitError, TechnicalError, UserError};
 pub use common::extraction::{
     CargoProject, CargoTarget, CargoTargetKind, DEFAULT_EXCLUDED_DIRECTORIES, DependencyExtraction,
