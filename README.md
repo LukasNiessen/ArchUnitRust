@@ -4,7 +4,22 @@ Architecture testing for Rust. Part of **ArchUnitEverything** — one architectu
 
 > Early development. Nothing to install yet.
 
-The graph kernel is being built issue by issue. Its public data model is already usable:
+The first fluent file rule is usable as an ordinary Rust test value:
+
+```rust
+use archunit::{Checkable, project_files};
+
+let rule = project_files()
+    .in_folder("src/**")
+    .should()
+    .have_no_cycles();
+
+let _: &dyn Checkable = &rule;
+```
+
+Rules are lazy: building this sentence reads no files. Calling `check()` locates the Cargo project,
+extracts its dependency graph, and returns one data-carrying cycle violation per circular path.
+The graph model is also available directly:
 
 ```rust
 use archunit::{Edge, Graph, ImportKind};
