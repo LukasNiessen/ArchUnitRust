@@ -7,6 +7,7 @@ use crate::files::assertion::{
     CustomFileViolation, CycleViolation, ExternalModuleDependencyViolation,
     FileDependencyViolation, FilePatternViolation,
 };
+use crate::layers::assertion::LayerDependencyViolation;
 
 /// The machine-readable family of a [`Violation`].
 ///
@@ -26,6 +27,8 @@ pub enum ViolationKind {
     ExternalModuleDependency,
     /// A selected file disagrees with a user-defined predicate.
     CustomFile,
+    /// An internal dependency disagrees with a named-layer policy.
+    LayerDependency,
 }
 
 impl ViolationKind {
@@ -39,6 +42,7 @@ impl ViolationKind {
             Self::FileDependency => "file-dependency",
             Self::ExternalModuleDependency => "external-module-dependency",
             Self::CustomFile => "custom-file",
+            Self::LayerDependency => "layer-dependency",
         }
     }
 }
@@ -68,6 +72,8 @@ pub enum Violation {
     ExternalModuleDependency(ExternalModuleDependencyViolation),
     /// A file disagrees with a user-defined predicate.
     CustomFile(CustomFileViolation),
+    /// An internal dependency disagrees with a named-layer policy.
+    LayerDependency(LayerDependencyViolation),
 }
 
 impl Violation {
@@ -81,6 +87,7 @@ impl Violation {
             Self::FileDependency(_) => ViolationKind::FileDependency,
             Self::ExternalModuleDependency(_) => ViolationKind::ExternalModuleDependency,
             Self::CustomFile(_) => ViolationKind::CustomFile,
+            Self::LayerDependency(_) => ViolationKind::LayerDependency,
         }
     }
 
@@ -93,7 +100,8 @@ impl Violation {
             | Self::FilePattern(_)
             | Self::FileDependency(_)
             | Self::ExternalModuleDependency(_)
-            | Self::CustomFile(_) => None,
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_) => None,
         }
     }
 
@@ -106,7 +114,8 @@ impl Violation {
             | Self::FilePattern(_)
             | Self::FileDependency(_)
             | Self::ExternalModuleDependency(_)
-            | Self::CustomFile(_) => None,
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_) => None,
         }
     }
 
@@ -119,7 +128,8 @@ impl Violation {
             | Self::Cycle(_)
             | Self::FileDependency(_)
             | Self::ExternalModuleDependency(_)
-            | Self::CustomFile(_) => None,
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_) => None,
         }
     }
 
@@ -132,7 +142,8 @@ impl Violation {
             | Self::Cycle(_)
             | Self::FilePattern(_)
             | Self::ExternalModuleDependency(_)
-            | Self::CustomFile(_) => None,
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_) => None,
         }
     }
 
@@ -147,7 +158,8 @@ impl Violation {
             | Self::Cycle(_)
             | Self::FilePattern(_)
             | Self::FileDependency(_)
-            | Self::CustomFile(_) => None,
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_) => None,
         }
     }
 
@@ -160,7 +172,22 @@ impl Violation {
             | Self::Cycle(_)
             | Self::FilePattern(_)
             | Self::FileDependency(_)
-            | Self::ExternalModuleDependency(_) => None,
+            | Self::ExternalModuleDependency(_)
+            | Self::LayerDependency(_) => None,
+        }
+    }
+
+    /// Returns the named-layer dependency data when this is a layer violation.
+    #[must_use]
+    pub const fn as_layer_dependency(&self) -> Option<&LayerDependencyViolation> {
+        match self {
+            Self::LayerDependency(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_) => None,
         }
     }
 }
@@ -201,13 +228,20 @@ impl From<CustomFileViolation> for Violation {
     }
 }
 
+impl From<LayerDependencyViolation> for Violation {
+    fn from(violation: LayerDependencyViolation) -> Self {
+        Self::LayerDependency(violation)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Violation, ViolationKind};
     use crate::{
         CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
         ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
-        Graph, ImportKind, ProjectedEdge, RegexFactory, project_to_nodes,
+        Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, ProjectedEdge,
+        RegexFactory, project_to_nodes,
     };
 
     #[test]
@@ -309,6 +343,29 @@ mod tests {
         assert_eq!(violation.kind(), ViolationKind::CustomFile);
         assert_eq!(violation.kind().as_str(), "custom-file");
         assert!(violation.as_custom_file().is_some());
+        assert!(violation.as_external_module_dependency().is_none());
+        assert!(violation.as_file_dependency().is_none());
+        assert!(violation.as_file_pattern().is_none());
+        assert!(violation.as_cycle().is_none());
+        assert!(violation.as_empty_test().is_none());
+        assert!(violation.as_layer_dependency().is_none());
+    }
+
+    #[test]
+    fn layer_dependency_has_a_stable_kind_and_typed_accessor() {
+        let raw = Edge::new("src/api.rs", "src/db.rs", false, [ImportKind::Use]);
+        let dependency = ProjectedEdge::new("src/api.rs", "src/db.rs", [raw]);
+        let violation = Violation::from(LayerDependencyViolation::new(
+            dependency,
+            "api",
+            "database",
+            LayerDependencyRule::MayOnlyDependOnLayers,
+        ));
+
+        assert_eq!(violation.kind(), ViolationKind::LayerDependency);
+        assert_eq!(violation.kind().as_str(), "layer-dependency");
+        assert!(violation.as_layer_dependency().is_some());
+        assert!(violation.as_custom_file().is_none());
         assert!(violation.as_external_module_dependency().is_none());
         assert!(violation.as_file_dependency().is_none());
         assert!(violation.as_file_pattern().is_none());

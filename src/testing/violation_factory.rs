@@ -1,6 +1,7 @@
 use crate::{
     CustomFileViolation, CycleViolation, EmptyTestViolation, ExternalModuleDependencyViolation,
-    FileDependencyViolation, FilePatternViolation, ProjectedEdge, TestViolation, Violation,
+    FileDependencyViolation, FilePatternViolation, LayerDependencyRule, LayerDependencyViolation,
+    ProjectedEdge, TestViolation, Violation,
 };
 
 /// The sole mapping from structured violation data to human-readable prose.
@@ -20,6 +21,7 @@ impl ViolationFactory {
                 format_external_module_dependency(violation)
             }
             Violation::CustomFile(violation) => format_custom_file(violation),
+            Violation::LayerDependency(violation) => format_layer_dependency(violation),
         }
     }
 }
@@ -160,6 +162,30 @@ fn format_custom_file(violation: &CustomFileViolation) -> TestViolation {
     )
 }
 
+fn format_layer_dependency(violation: &LayerDependencyViolation) -> TestViolation {
+    let relationship = match violation.rule {
+        LayerDependencyRule::MayOnlyDependOnLayers => format!(
+            "Layer '{}' depends on layer '{}', which is outside its allowed layer set.",
+            violation.source_layer, violation.target_layer
+        ),
+        LayerDependencyRule::MayNotDependOnLayers => format!(
+            "Layer '{}' depends on forbidden layer '{}'.",
+            violation.source_layer, violation.target_layer
+        ),
+    };
+    let edge = &violation.dependency;
+
+    TestViolation::new(
+        "Layer dependency violation",
+        format!(
+            "{relationship} File dependency: '{}' -> '{}'.{}",
+            edge.source_label,
+            edge.target_label,
+            evidence_suffix(edge)
+        ),
+    )
+}
+
 fn evidence_suffix(edge: &ProjectedEdge) -> String {
     if edge.cumulated_edges.is_empty() {
         String::new()
@@ -180,7 +206,8 @@ mod tests {
     use crate::{
         CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
         ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
-        Graph, ImportKind, ProjectedEdge, RegexFactory, Violation, project_to_nodes,
+        Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, ProjectedEdge,
+        RegexFactory, Violation, project_to_nodes,
     };
 
     use super::ViolationFactory;
@@ -292,6 +319,32 @@ mod tests {
         assert_eq!(
             formatted.details,
             "File 'src/api.rs' matched the forbidden custom predicate 'contain no public functions'. Source facts: name 'api', extension '.rs', directory 'src', 1 non-blank line."
+        );
+    }
+
+    #[test]
+    fn formats_layer_policy_and_concrete_file_evidence() {
+        let dependency = projected("src/api.rs", "src/db.rs", false);
+        let allowed = Violation::from(LayerDependencyViolation::new(
+            dependency.clone(),
+            "api",
+            "database",
+            LayerDependencyRule::MayOnlyDependOnLayers,
+        ));
+        let forbidden = Violation::from(LayerDependencyViolation::new(
+            dependency,
+            "api",
+            "database",
+            LayerDependencyRule::MayNotDependOnLayers,
+        ));
+
+        assert_eq!(
+            ViolationFactory::from_violation(&allowed).details,
+            "Layer 'api' depends on layer 'database', which is outside its allowed layer set. File dependency: 'src/api.rs' -> 'src/db.rs'. Evidence: src/api.rs -> src/db.rs [use, path_reference]."
+        );
+        assert_eq!(
+            ViolationFactory::from_violation(&forbidden).details,
+            "Layer 'api' depends on forbidden layer 'database'. File dependency: 'src/api.rs' -> 'src/db.rs'. Evidence: src/api.rs -> src/db.rs [use, path_reference]."
         );
     }
 }
