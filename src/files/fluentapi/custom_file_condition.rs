@@ -70,7 +70,6 @@ impl CustomFileCondition {
     }
 
     /// Returns the stored predicate.
-    #[must_use]
     pub fn predicate(&self) -> &FilePredicate {
         self.predicate.as_ref()
     }
