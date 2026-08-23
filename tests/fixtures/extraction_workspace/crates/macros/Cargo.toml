@@ -1,0 +1,8 @@
+[package]
+name = "fixture-macros"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+proc-macro = true
+path = "macro_src/entry.rs"

@@ -1,0 +1,25 @@
+[package]
+name = "fixture-app"
+version.workspace = true
+edition.workspace = true
+build = "build/custom.rs"
+
+[lib]
+path = "source/library.rs"
+
+[[bin]]
+name = "fixture-server"
+path = "cmd/server.rs"
+
+[[test]]
+name = "architecture"
+path = "qa/architecture.rs"
+
+[[example]]
+name = "demo"
+path = "samples/demo.rs"
+
+[[bench]]
+name = "speed"
+path = "perf/speed.rs"
+harness = false
