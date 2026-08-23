@@ -41,7 +41,7 @@ impl GraphExtraction {
 /// Every discovered Rust source receives a marker self-edge. Classified dependency references
 /// become internal or external edges, while ambiguous and unknown references remain diagnostics.
 /// Parallel endpoint pairs are merged by [`Graph`].
-pub fn extract_graph(
+pub(crate) fn extract_graph_uncached(
     project: &CargoProject,
     options: SourceOptions,
 ) -> Result<GraphExtraction, ArchUnitError> {
