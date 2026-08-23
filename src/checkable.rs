@@ -1,4 +1,8 @@
-use crate::{ArchUnitError, CheckOptions, Violation};
+//! The execution contract shared by every terminal architecture rule.
+
+use crate::common::error::ArchUnitError;
+use crate::common::fluentapi::CheckOptions;
+use crate::violation::Violation;
 
 /// The complete outcome of running one architecture rule.
 ///
