@@ -1,8 +1,20 @@
+mod cargo_project;
 mod edge;
+mod enumerate_source_files;
 mod graph;
 mod identifier;
 mod import_kind;
+mod locate_project;
+mod project_locator;
+mod source_file;
+mod source_options;
 
+pub use cargo_project::{CargoProject, CargoTarget, CargoTargetKind};
 pub use edge::Edge;
+pub use enumerate_source_files::{DEFAULT_EXCLUDED_DIRECTORIES, enumerate_source_files};
 pub use graph::Graph;
 pub use import_kind::{ImportKind, ImportKindSet};
+pub use locate_project::{locate_project, locate_project_from};
+pub use project_locator::ProjectLocator;
+pub use source_file::SourceFile;
+pub use source_options::SourceOptions;
