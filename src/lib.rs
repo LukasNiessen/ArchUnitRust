@@ -9,8 +9,8 @@ pub use common::extraction::{
     CargoProject, CargoTarget, CargoTargetKind, DEFAULT_EXCLUDED_DIRECTORIES, DependencyExtraction,
     DependencyReference, DependencyTarget, Edge, ExtractionDiagnostic, ExtractionDiagnosticKind,
     Graph, GraphExtraction, ImportKind, ImportKindSet, ProjectLocator, SourceFile, SourceOptions,
-    enumerate_source_files, extract_dependencies, extract_graph, locate_project,
-    locate_project_from,
+    clear_graph_cache, enumerate_source_files, extract_dependencies, extract_graph,
+    extract_graph_with_options, locate_project, locate_project_from,
 };
 pub use common::fluentapi::{CheckOptions, CheckResult, Checkable};
 pub use common::logging::LoggingOptions;

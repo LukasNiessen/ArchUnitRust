@@ -1,5 +1,5 @@
 /// Options that change Cargo source discovery.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[non_exhaustive]
 pub struct SourceOptions {
     include_dev_targets: bool,

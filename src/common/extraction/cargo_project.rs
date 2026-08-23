@@ -138,7 +138,7 @@ impl CargoTargetKind {
 }
 
 /// One crate target reported by Cargo metadata.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub struct CargoTarget {
     package: String,
@@ -224,7 +224,7 @@ impl CargoTarget {
 }
 
 /// Cargo's authoritative description of the selected workspace.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub struct CargoProject {
     root: PathBuf,
