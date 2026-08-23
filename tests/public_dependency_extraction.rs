@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 
 use archunit::{
     DependencyExtraction, ExtractionDiagnosticKind, ImportKind, ProjectLocator, SourceOptions,
@@ -240,9 +240,73 @@ fn undeclared_first_segments_are_diagnostic_and_unclassified() {
             .iter()
             .filter(|diagnostic| diagnostic.kind() == ExtractionDiagnosticKind::UnknownReference)
             .filter_map(|diagnostic| diagnostic.subject())
-            .collect::<Vec<_>>(),
-        ["ghost_dependency::Thing"]
+            .collect::<BTreeSet<_>>(),
+        [
+            "ghost_dependency::Thing",
+            "grouped::Kept",
+            "lookalike::Thing",
+            "mismatch::Thing"
+        ]
+        .into_iter()
+        .collect()
     );
+}
+
+#[test]
+fn declaration_ignore_directives_filter_only_attached_matching_imports() {
+    let extraction = extraction();
+
+    for ignored in [
+        "ignored_inline::Thing",
+        "ignored_preceding::Thing",
+        "grouped::Ignored",
+        "ignored_extern",
+        "crate::ignore_cases::ignored_mod",
+    ] {
+        assert!(
+            !extraction
+                .references()
+                .iter()
+                .any(|reference| reference.referenced_path() == ignored),
+            "ignored declaration leaked reference {ignored}"
+        );
+        assert!(
+            !extraction
+                .diagnostics()
+                .iter()
+                .any(|diagnostic| diagnostic.subject() == Some(ignored)),
+            "ignored declaration leaked diagnostic {ignored}"
+        );
+    }
+
+    for retained in ["grouped::Kept", "mismatch::Thing", "lookalike::Thing"] {
+        assert!(extraction.references().iter().any(|reference| {
+            reference.referenced_path() == retained && reference.target().is_none()
+        }));
+        assert!(extraction.diagnostics().iter().any(|diagnostic| {
+            diagnostic.kind() == ExtractionDiagnosticKind::UnknownReference
+                && diagnostic.subject() == Some(retained)
+        }));
+    }
+    assert!(has_internal_reference(
+        &extraction,
+        "crates/app/source/library.rs",
+        "crate::ignore_cases",
+        "crates/app/source/library.rs",
+        ImportKind::Mod
+    ));
+    assert!(has_internal_reference(
+        &extraction,
+        "crates/app/source/library.rs",
+        "ignored_alias::Handler",
+        "crates/app/source/api.rs",
+        ImportKind::PathReference
+    ));
+    assert!(!extraction.references().iter().any(|reference| {
+        reference.source() == "crates/app/source/library.rs"
+            && reference.referenced_path() == "crate::api"
+            && reference.kind() == ImportKind::Use
+    }));
 }
 
 #[test]
