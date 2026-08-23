@@ -28,6 +28,7 @@ pub use extract_dependencies::extract_dependencies;
 pub use extract_graph::GraphExtraction;
 pub use graph::Graph;
 pub use graph_cache::{clear_graph_cache, extract_graph, extract_graph_with_options};
+pub(crate) use identifier::normalize_identifier;
 pub use import_kind::{ImportKind, ImportKindSet};
 pub use locate_project::{locate_project, locate_project_from};
 pub use project_locator::ProjectLocator;

@@ -32,6 +32,7 @@ pub use files::assertion::{
     FilePatternViolation, gather_cycle_violations, gather_external_module_dependency_violations,
     gather_file_dependency_violations, gather_matching_file_violations,
 };
+pub use files::extraction::FileInfo;
 pub use files::fluentapi::{
     CycleFreeFileCondition, DependOnExternalModuleCondition,
     DependOnExternalModuleConditionBuilder, DependOnFileCondition, DependOnFileConditionBuilder,
