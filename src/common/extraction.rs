@@ -16,7 +16,8 @@ mod use_tree;
 
 pub use cargo_project::{CargoProject, CargoTarget, CargoTargetKind};
 pub use dependency::{
-    DependencyExtraction, DependencyReference, ExtractionDiagnostic, ExtractionDiagnosticKind,
+    DependencyExtraction, DependencyReference, DependencyTarget, ExtractionDiagnostic,
+    ExtractionDiagnosticKind,
 };
 pub use edge::Edge;
 pub use enumerate_source_files::{DEFAULT_EXCLUDED_DIRECTORIES, enumerate_source_files};

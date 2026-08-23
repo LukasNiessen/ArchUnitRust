@@ -53,6 +53,8 @@ pub(crate) fn extract_raw_dependencies(
             source.identifier()
         );
         let module = LogicalModule {
+            package: target.package().to_owned(),
+            dependency_scope: target.dependency_scope(),
             target: target_id,
             segments: Vec::new(),
         };
@@ -227,6 +229,8 @@ impl ModuleExtractor {
         let mut child_segments = module.segments.clone();
         child_segments.push(name.clone());
         let child_module = LogicalModule {
+            package: module.package.clone(),
+            dependency_scope: module.dependency_scope,
             target: module.target.clone(),
             segments: child_segments,
         };

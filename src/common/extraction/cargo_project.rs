@@ -1,12 +1,68 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
+    fs,
     path::{Path, PathBuf},
 };
 
-use cargo_metadata::{Metadata, TargetKind};
+use cargo_metadata::{DependencyKind, Metadata, TargetKind};
 
 use super::{SourceFile, SourceOptions};
 use crate::TechnicalError;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) enum CargoDependencyScope {
+    Normal,
+    Development,
+    Build,
+}
+
+impl CargoDependencyScope {
+    const fn accepts(self, kind: CargoDependencyKind) -> bool {
+        match self {
+            Self::Normal => matches!(
+                kind,
+                CargoDependencyKind::Normal | CargoDependencyKind::Unknown
+            ),
+            Self::Development => !matches!(kind, CargoDependencyKind::Build),
+            Self::Build => matches!(
+                kind,
+                CargoDependencyKind::Build | CargoDependencyKind::Unknown
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum CargoDependencyKind {
+    Normal,
+    Development,
+    Build,
+    Unknown,
+}
+
+impl From<DependencyKind> for CargoDependencyKind {
+    fn from(kind: DependencyKind) -> Self {
+        match kind {
+            DependencyKind::Normal => Self::Normal,
+            DependencyKind::Development => Self::Development,
+            DependencyKind::Build => Self::Build,
+            DependencyKind::Unknown => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) enum CargoDependencyTarget {
+    Internal(String),
+    External(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct CargoDependency {
+    visible_name: String,
+    kind: CargoDependencyKind,
+    target: CargoDependencyTarget,
+}
 
 /// A Cargo target category relevant to source analysis.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -137,6 +193,34 @@ impl CargoTarget {
     pub fn is_dev_only(&self) -> bool {
         self.kinds.iter().any(CargoTargetKind::is_dev_only)
     }
+
+    pub(crate) fn dependency_scope(&self) -> CargoDependencyScope {
+        if self
+            .kinds
+            .iter()
+            .any(|kind| matches!(kind, CargoTargetKind::CustomBuild))
+        {
+            CargoDependencyScope::Build
+        } else if self.is_dev_only() {
+            CargoDependencyScope::Development
+        } else {
+            CargoDependencyScope::Normal
+        }
+    }
+
+    fn is_dependency_target(&self) -> bool {
+        self.kinds.iter().any(|kind| {
+            matches!(
+                kind,
+                CargoTargetKind::CDyLib
+                    | CargoTargetKind::DyLib
+                    | CargoTargetKind::Lib
+                    | CargoTargetKind::ProcMacro
+                    | CargoTargetKind::RLib
+                    | CargoTargetKind::StaticLib
+            )
+        })
+    }
 }
 
 /// Cargo's authoritative description of the selected workspace.
@@ -148,6 +232,7 @@ pub struct CargoProject {
     target_directory: PathBuf,
     member_roots: Vec<PathBuf>,
     targets: Vec<CargoTarget>,
+    dependencies: BTreeMap<String, Vec<CargoDependency>>,
 }
 
 impl CargoProject {
@@ -156,9 +241,11 @@ impl CargoProject {
         let manifest_path = root.join("Cargo.toml");
         let target_directory = PathBuf::from(metadata.target_directory.as_std_path());
         let mut member_roots = BTreeSet::new();
+        let mut package_roots = BTreeMap::new();
         let mut targets = Vec::new();
+        let workspace_packages = metadata.workspace_packages();
 
-        for package in metadata.workspace_packages() {
+        for package in &workspace_packages {
             let package_manifest = PathBuf::from(package.manifest_path.as_std_path());
             let Some(package_root) = package_manifest.parent() else {
                 return Err(TechnicalError::new(format!(
@@ -168,6 +255,7 @@ impl CargoProject {
             };
             let package_root = package_root.to_path_buf();
             member_roots.insert(package_root.clone());
+            package_roots.insert(comparable_path(&package_root), package.name.to_string());
 
             for target in &package.targets {
                 let source_path = PathBuf::from(target.src_path.as_std_path());
@@ -205,12 +293,62 @@ impl CargoProject {
                 && left.kinds == right.kinds
         });
 
+        let mut dependency_targets = BTreeMap::<String, BTreeSet<String>>::new();
+        for target in &targets {
+            if target.is_dependency_target() {
+                dependency_targets
+                    .entry(target.package.clone())
+                    .or_default()
+                    .insert(target.source.identifier().to_owned());
+            }
+        }
+
+        let mut dependencies = BTreeMap::<String, Vec<CargoDependency>>::new();
+        for package in workspace_packages {
+            let package_name = package.name.to_string();
+            let package_dependencies = dependencies.entry(package_name).or_default();
+            for dependency in &package.dependencies {
+                let visible_name = normalize_crate_name(
+                    dependency
+                        .rename
+                        .as_deref()
+                        .unwrap_or(dependency.name.as_str()),
+                );
+                let kind = CargoDependencyKind::from(dependency.kind);
+                let workspace_package = dependency
+                    .path
+                    .as_ref()
+                    .and_then(|path| package_roots.get(&comparable_path(path.as_std_path())));
+
+                if let Some(workspace_package) = workspace_package {
+                    if let Some(targets) = dependency_targets.get(workspace_package) {
+                        for target in targets {
+                            package_dependencies.push(CargoDependency {
+                                visible_name: visible_name.clone(),
+                                kind,
+                                target: CargoDependencyTarget::Internal(target.clone()),
+                            });
+                        }
+                    }
+                } else {
+                    package_dependencies.push(CargoDependency {
+                        visible_name: visible_name.clone(),
+                        kind,
+                        target: CargoDependencyTarget::External(visible_name),
+                    });
+                }
+            }
+            package_dependencies.sort();
+            package_dependencies.dedup();
+        }
+
         Ok(Self {
             root,
             manifest_path,
             target_directory,
             member_roots: member_roots.into_iter().collect(),
             targets,
+            dependencies,
         })
     }
 
@@ -249,6 +387,40 @@ impl CargoProject {
             .iter()
             .filter(move |target| options.includes_dev_targets() || !target.is_dev_only())
     }
+
+    pub(crate) fn dependency_targets(
+        &self,
+        package: &str,
+        scope: CargoDependencyScope,
+        visible_name: &str,
+    ) -> BTreeSet<CargoDependencyTarget> {
+        if matches!(visible_name, "std" | "core" | "alloc" | "proc_macro") {
+            return [CargoDependencyTarget::External(visible_name.to_owned())]
+                .into_iter()
+                .collect();
+        }
+
+        self.dependencies
+            .get(package)
+            .into_iter()
+            .flatten()
+            .filter(|dependency| {
+                dependency.visible_name == visible_name && scope.accepts(dependency.kind)
+            })
+            .map(|dependency| dependency.target.clone())
+            .collect()
+    }
+}
+
+fn comparable_path(path: &Path) -> PathBuf {
+    match fs::canonicalize(path) {
+        Ok(path) => path,
+        Err(_) => path.to_path_buf(),
+    }
+}
+
+fn normalize_crate_name(name: &str) -> String {
+    name.replace('-', "_")
 }
 
 pub(crate) fn workspace_identifier(root: &Path, path: &Path) -> Option<String> {
@@ -263,9 +435,12 @@ pub(crate) fn workspace_identifier(root: &Path, path: &Path) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{collections::BTreeMap, path::PathBuf};
 
-    use super::{CargoProject, CargoTarget, CargoTargetKind, workspace_identifier};
+    use super::{
+        CargoDependencyKind, CargoDependencyScope, CargoProject, CargoTarget, CargoTargetKind,
+        normalize_crate_name, workspace_identifier,
+    };
     use crate::{SourceFile, SourceOptions};
 
     fn target(kind: CargoTargetKind, identifier: &str) -> CargoTarget {
@@ -298,6 +473,7 @@ mod tests {
                 target(CargoTargetKind::Lib, "src/lib.rs"),
                 target(CargoTargetKind::Test, "tests/architecture.rs"),
             ],
+            dependencies: BTreeMap::new(),
         };
 
         assert_eq!(project.source_targets(SourceOptions::new()).count(), 1);
@@ -318,5 +494,17 @@ mod tests {
             workspace_identifier(&root, &path).as_deref(),
             Some("crates/app/src/lib.rs")
         );
+    }
+
+    #[test]
+    fn cargo_names_and_dependency_scopes_match_rust_visibility() {
+        assert_eq!(normalize_crate_name("wire-format"), "wire_format");
+        assert!(CargoDependencyScope::Normal.accepts(CargoDependencyKind::Normal));
+        assert!(!CargoDependencyScope::Normal.accepts(CargoDependencyKind::Development));
+        assert!(CargoDependencyScope::Development.accepts(CargoDependencyKind::Normal));
+        assert!(CargoDependencyScope::Development.accepts(CargoDependencyKind::Development));
+        assert!(!CargoDependencyScope::Development.accepts(CargoDependencyKind::Build));
+        assert!(CargoDependencyScope::Build.accepts(CargoDependencyKind::Build));
+        assert!(!CargoDependencyScope::Build.accepts(CargoDependencyKind::Normal));
     }
 }

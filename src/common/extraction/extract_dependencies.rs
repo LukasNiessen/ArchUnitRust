@@ -1,8 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-    CargoProject, DependencyExtraction, DependencyReference, ExtractionDiagnostic,
-    ExtractionDiagnosticKind, ImportKind, SourceOptions,
+    CargoProject, DependencyExtraction, DependencyReference, DependencyTarget,
+    ExtractionDiagnostic, ExtractionDiagnosticKind, ImportKind, SourceOptions,
+    cargo_project::CargoDependencyTarget,
     dependency::{InternalResolution, LogicalModule, RawReference},
     enumerate_source_files,
     module_tree::extract_raw_dependencies,
@@ -11,25 +12,49 @@ use crate::ArchUnitError;
 
 /// Parses selected Cargo targets and extracts Rust dependency references.
 ///
-/// Internal module prefixes are resolved to workspace-relative files. Paths not resolved internally
-/// remain raw for Cargo-aware external/unknown classification. Parse and resolution limitations are
-/// returned as diagnostics instead of aborting other files.
+/// Internal module prefixes and renamed workspace dependencies resolve to workspace-relative files.
+/// Sysroot and declared third-party dependencies resolve to their Cargo-visible crate names. Parse,
+/// ambiguity, and unknown-name limitations are returned as diagnostics instead of aborting files.
 pub fn extract_dependencies(
     project: &CargoProject,
     options: SourceOptions,
 ) -> Result<DependencyExtraction, ArchUnitError> {
     let sources = enumerate_source_files(project, options)?;
     let raw = extract_raw_dependencies(project, options, &sources);
-    let aliases = collect_internal_aliases(&raw.references, &raw.index);
+    let internal_aliases = collect_internal_aliases(&raw.references, &raw.index);
+    let cargo_aliases = collect_cargo_aliases(&raw.references, project);
     let mut diagnostics = raw.diagnostics;
     let mut references = Vec::new();
 
     for reference in &raw.references {
-        let outcome = resolve_reference(reference, &raw.index, &aliases);
-        let internal_target = match outcome {
-            ResolutionOutcome::Found(resolution) => Some(resolution.source),
-            ResolutionOutcome::Unresolved => None,
-            ResolutionOutcome::Ambiguous(candidates) => {
+        let candidates = classification_candidates(
+            reference,
+            &raw.index,
+            &internal_aliases,
+            &cargo_aliases,
+            project,
+        );
+        let target = match candidates.len() {
+            0 => {
+                if reference.kind != ImportKind::Mod {
+                    diagnostics.push(ExtractionDiagnostic::new(
+                        reference.source.clone(),
+                        Some(reference.line),
+                        ExtractionDiagnosticKind::UnknownReference,
+                        Some(reference.rendered_path()),
+                        Vec::new(),
+                        reference.segments.first().map(|segment| {
+                            format!(
+                                "{segment} is not visible in Cargo package {}",
+                                reference.module.package
+                            )
+                        }),
+                    ));
+                }
+                None
+            }
+            1 => candidates.into_iter().next(),
+            _ => {
                 diagnostics.push(ExtractionDiagnostic::new(
                     reference.source.clone(),
                     Some(reference.line),
@@ -37,7 +62,7 @@ pub fn extract_dependencies(
                     Some(reference.rendered_path()),
                     candidates
                         .into_iter()
-                        .map(|candidate| candidate.source)
+                        .map(|candidate| candidate.as_str().to_owned())
                         .collect(),
                     None,
                 ));
@@ -47,7 +72,7 @@ pub fn extract_dependencies(
         references.push(DependencyReference::new(
             reference.source.clone(),
             reference.rendered_path(),
-            internal_target,
+            target,
             reference.kind,
             reference.line,
         ));
@@ -58,6 +83,111 @@ pub fn extract_dependencies(
 
 type AliasKey = (LogicalModule, String);
 type AliasMap = BTreeMap<AliasKey, BTreeSet<InternalResolution>>;
+type CargoAliasMap = BTreeMap<AliasKey, BTreeSet<DependencyTarget>>;
+
+fn collect_cargo_aliases(references: &[RawReference], project: &CargoProject) -> CargoAliasMap {
+    let mut aliases = CargoAliasMap::new();
+    for reference in references {
+        if !matches!(reference.kind, ImportKind::Use | ImportKind::PubUse) {
+            continue;
+        }
+        let Some(binding) = &reference.binding else {
+            continue;
+        };
+        let targets = direct_cargo_targets(reference, project);
+        if !targets.is_empty() {
+            aliases
+                .entry((reference.module.clone(), binding.clone()))
+                .or_default()
+                .extend(targets);
+        }
+    }
+    aliases
+}
+
+fn classification_candidates(
+    reference: &RawReference,
+    index: &BTreeMap<LogicalModule, String>,
+    internal_aliases: &AliasMap,
+    cargo_aliases: &CargoAliasMap,
+    project: &CargoProject,
+) -> BTreeSet<DependencyTarget> {
+    let alias_candidates =
+        classified_alias_candidates(reference, index, internal_aliases, cargo_aliases);
+    if !alias_candidates.is_empty() {
+        return alias_candidates;
+    }
+
+    let mut candidates = BTreeSet::new();
+    match resolve_direct(reference, index) {
+        ResolutionOutcome::Found(resolution) => {
+            candidates.insert(DependencyTarget::Internal(resolution.source));
+        }
+        ResolutionOutcome::Ambiguous(resolutions) => {
+            candidates.extend(
+                resolutions
+                    .into_iter()
+                    .map(|resolution| DependencyTarget::Internal(resolution.source)),
+            );
+        }
+        ResolutionOutcome::Unresolved => {}
+    }
+    candidates.extend(direct_cargo_targets(reference, project));
+
+    candidates
+}
+
+fn classified_alias_candidates(
+    reference: &RawReference,
+    index: &BTreeMap<LogicalModule, String>,
+    internal_aliases: &AliasMap,
+    cargo_aliases: &CargoAliasMap,
+) -> BTreeSet<DependencyTarget> {
+    let mut candidates = BTreeSet::new();
+    if !reference.leading_colon && !starts_with_explicit_root(&reference.segments) {
+        if let Some(binding) = reference.segments.first() {
+            if let Some(resolutions) =
+                internal_aliases.get(&(reference.module.clone(), binding.clone()))
+            {
+                candidates.extend(resolutions.iter().map(|resolution| {
+                    DependencyTarget::Internal(
+                        resolve_from_alias(reference, resolution, index).source,
+                    )
+                }));
+            }
+            if let Some(targets) = cargo_aliases.get(&(reference.module.clone(), binding.clone())) {
+                candidates.extend(targets.iter().cloned());
+            }
+        }
+    }
+
+    candidates
+}
+
+fn direct_cargo_targets(
+    reference: &RawReference,
+    project: &CargoProject,
+) -> BTreeSet<DependencyTarget> {
+    if starts_with_explicit_root(&reference.segments) {
+        return BTreeSet::new();
+    }
+    let Some(first_segment) = reference.segments.first() else {
+        return BTreeSet::new();
+    };
+
+    project
+        .dependency_targets(
+            &reference.module.package,
+            reference.module.dependency_scope,
+            first_segment,
+        )
+        .into_iter()
+        .map(|target| match target {
+            CargoDependencyTarget::Internal(target) => DependencyTarget::Internal(target),
+            CargoDependencyTarget::External(target) => DependencyTarget::External(target),
+        })
+        .collect()
+}
 
 fn collect_internal_aliases(
     references: &[RawReference],
@@ -84,25 +214,25 @@ fn collect_internal_aliases(
     aliases
 }
 
+#[cfg(test)]
 fn resolve_reference(
     reference: &RawReference,
     index: &BTreeMap<LogicalModule, String>,
     aliases: &AliasMap,
 ) -> ResolutionOutcome {
-    let mut candidates = BTreeSet::new();
-    add_outcome(&mut candidates, resolve_direct(reference, index));
-
     if !reference.leading_colon && !starts_with_explicit_root(&reference.segments) {
         if let Some(binding) = reference.segments.first() {
             if let Some(resolutions) = aliases.get(&(reference.module.clone(), binding.clone())) {
+                let mut candidates = BTreeSet::new();
                 for resolution in resolutions {
                     candidates.insert(resolve_from_alias(reference, resolution, index));
                 }
+                return outcome_from_candidates(candidates);
             }
         }
     }
 
-    outcome_from_candidates(candidates)
+    resolve_direct(reference, index)
 }
 
 fn resolve_direct(
@@ -117,7 +247,7 @@ fn resolve_direct(
     match reference.segments[0].as_str() {
         "crate" => {
             if let Some(found) =
-                longest_prefix(index, &reference.module.target, &reference.segments[1..], 0)
+                longest_prefix(index, &reference.module, &reference.segments[1..], 0)
             {
                 candidates.insert(found);
             }
@@ -127,7 +257,7 @@ fn resolve_direct(
             path.extend_from_slice(&reference.segments[1..]);
             if let Some(found) = longest_prefix(
                 index,
-                &reference.module.target,
+                &reference.module,
                 &path,
                 reference.module.segments.len(),
             ) {
@@ -144,17 +274,13 @@ fn resolve_direct(
                 let base_len = reference.module.segments.len() - super_count;
                 let mut path = reference.module.segments[..base_len].to_vec();
                 path.extend_from_slice(&reference.segments[super_count..]);
-                if let Some(found) =
-                    longest_prefix(index, &reference.module.target, &path, base_len)
-                {
+                if let Some(found) = longest_prefix(index, &reference.module, &path, base_len) {
                     candidates.insert(found);
                 }
             }
         }
         _ => {
-            if let Some(found) =
-                longest_prefix(index, &reference.module.target, &reference.segments, 1)
-            {
+            if let Some(found) = longest_prefix(index, &reference.module, &reference.segments, 1) {
                 candidates.insert(found);
             }
             if !reference.module.segments.is_empty() {
@@ -162,7 +288,7 @@ fn resolve_direct(
                 local.extend_from_slice(&reference.segments);
                 if let Some(found) = longest_prefix(
                     index,
-                    &reference.module.target,
+                    &reference.module,
                     &local,
                     reference.module.segments.len() + 1,
                 ) {
@@ -182,25 +308,22 @@ fn resolve_from_alias(
 ) -> InternalResolution {
     let mut path = alias.module_segments.clone();
     path.extend(reference.segments.iter().skip(1).cloned());
-    longest_prefix(
-        index,
-        &reference.module.target,
-        &path,
-        alias.module_segments.len(),
-    )
-    .unwrap_or_else(|| alias.clone())
+    longest_prefix(index, &reference.module, &path, alias.module_segments.len())
+        .unwrap_or_else(|| alias.clone())
 }
 
 fn longest_prefix(
     index: &BTreeMap<LogicalModule, String>,
-    target: &str,
+    context: &LogicalModule,
     path: &[String],
     minimum_length: usize,
 ) -> Option<InternalResolution> {
     for length in (minimum_length..=path.len()).rev() {
         let segments = path[..length].to_vec();
         let key = LogicalModule {
-            target: target.to_owned(),
+            package: context.package.clone(),
+            dependency_scope: context.dependency_scope,
+            target: context.target.clone(),
             segments: segments.clone(),
         };
         if let Some(source) = index.get(&key) {
@@ -217,16 +340,6 @@ fn starts_with_explicit_root(segments: &[String]) -> bool {
     segments
         .first()
         .is_some_and(|segment| matches!(segment.as_str(), "crate" | "self" | "super"))
-}
-
-fn add_outcome(candidates: &mut BTreeSet<InternalResolution>, outcome: ResolutionOutcome) {
-    match outcome {
-        ResolutionOutcome::Found(resolution) => {
-            candidates.insert(resolution);
-        }
-        ResolutionOutcome::Ambiguous(resolutions) => candidates.extend(resolutions),
-        ResolutionOutcome::Unresolved => {}
-    }
 }
 
 fn outcome_from_candidates(candidates: BTreeSet<InternalResolution>) -> ResolutionOutcome {
@@ -253,11 +366,14 @@ mod tests {
     use super::{AliasMap, ResolutionOutcome, collect_internal_aliases, resolve_reference};
     use crate::common::extraction::{
         ImportKind,
+        cargo_project::CargoDependencyScope,
         dependency::{LogicalModule, RawReference},
     };
 
     fn module(target: &str, segments: &[&str]) -> LogicalModule {
         LogicalModule {
+            package: "fixture".to_owned(),
+            dependency_scope: CargoDependencyScope::Normal,
             target: target.to_owned(),
             segments: segments.iter().map(ToString::to_string).collect(),
         }
@@ -344,5 +460,28 @@ mod tests {
         };
 
         assert_eq!(found.source, "src/api/model.rs");
+    }
+
+    #[test]
+    fn explicit_bindings_take_precedence_over_bare_module_candidates() {
+        let current = module("lib", &["consumer"]);
+        let import = RawReference {
+            source: "src/consumer.rs".to_owned(),
+            module: current.clone(),
+            segments: vec!["crate".to_owned(), "api".to_owned()],
+            leading_colon: false,
+            kind: ImportKind::Use,
+            line: 1,
+            binding: Some("local".to_owned()),
+        };
+        let aliases = collect_internal_aliases(&[import], &index());
+        let reference = reference(current, &["local", "Thing"]);
+
+        let ResolutionOutcome::Found(found) = resolve_reference(&reference, &index(), &aliases)
+        else {
+            panic!("the explicit local binding should win");
+        };
+
+        assert_eq!(found.source, "src/api.rs");
     }
 }

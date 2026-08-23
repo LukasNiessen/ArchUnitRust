@@ -18,8 +18,10 @@ pub enum ExtractionDiagnosticKind {
     ModuleCycle,
     /// A `#[path]` attribute was not a literal string.
     InvalidPathAttribute,
-    /// A qualified path matched more than one internal logical module.
+    /// A qualified path matched more than one viable internal or Cargo-visible target.
     AmbiguousReference,
+    /// A path's first segment matched neither an internal module nor Cargo's external prelude.
+    UnknownReference,
 }
 
 impl ExtractionDiagnosticKind {
@@ -34,7 +36,34 @@ impl ExtractionDiagnosticKind {
             Self::ModuleCycle => "module-cycle",
             Self::InvalidPathAttribute => "invalid-path-attribute",
             Self::AmbiguousReference => "ambiguous-reference",
+            Self::UnknownReference => "unknown-reference",
         }
+    }
+}
+
+/// The classified destination of one extracted Rust dependency reference.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
+pub enum DependencyTarget {
+    /// A normalized workspace-relative Rust source file.
+    Internal(String),
+    /// A Cargo-visible crate name, including dependency renames.
+    External(String),
+}
+
+impl DependencyTarget {
+    /// Returns the internal file or external Cargo-visible crate name.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Internal(target) | Self::External(target) => target,
+        }
+    }
+
+    /// Returns whether this target is outside the analyzed workspace.
+    #[must_use]
+    pub const fn is_external(&self) -> bool {
+        matches!(self, Self::External(_))
     }
 }
 
@@ -114,7 +143,7 @@ impl ExtractionDiagnostic {
 pub struct DependencyReference {
     source: String,
     referenced_path: String,
-    internal_target: Option<String>,
+    target: Option<DependencyTarget>,
     kind: ImportKind,
     line: usize,
 }
@@ -123,14 +152,14 @@ impl DependencyReference {
     pub(crate) fn new(
         source: impl Into<String>,
         referenced_path: impl Into<String>,
-        internal_target: Option<String>,
+        target: Option<DependencyTarget>,
         kind: ImportKind,
         line: usize,
     ) -> Self {
         Self {
             source: source.into(),
             referenced_path: referenced_path.into(),
-            internal_target,
+            target,
             kind,
             line,
         }
@@ -148,10 +177,28 @@ impl DependencyReference {
         &self.referenced_path
     }
 
-    /// Returns the resolved workspace file when the longest internal module prefix was unique.
+    /// Returns the classified destination, or `None` when a diagnostic prevented classification.
+    #[must_use]
+    pub const fn target(&self) -> Option<&DependencyTarget> {
+        self.target.as_ref()
+    }
+
+    /// Returns the resolved workspace file when the target is internal.
     #[must_use]
     pub fn internal_target(&self) -> Option<&str> {
-        self.internal_target.as_deref()
+        match &self.target {
+            Some(DependencyTarget::Internal(target)) => Some(target),
+            Some(DependencyTarget::External(_)) | None => None,
+        }
+    }
+
+    /// Returns the Cargo-visible crate name when the target is external.
+    #[must_use]
+    pub fn external_target(&self) -> Option<&str> {
+        match &self.target {
+            Some(DependencyTarget::External(target)) => Some(target),
+            Some(DependencyTarget::Internal(_)) | None => None,
+        }
     }
 
     /// Returns the Rust syntax category that produced the reference.
@@ -167,7 +214,7 @@ impl DependencyReference {
     }
 }
 
-/// The deterministic result of Rust dependency extraction before edge classification and merging.
+/// The deterministic result of Rust dependency extraction before graph-edge merging.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct DependencyExtraction {
@@ -210,6 +257,8 @@ impl DependencyExtraction {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) struct LogicalModule {
+    pub package: String,
+    pub dependency_scope: super::cargo_project::CargoDependencyScope,
     pub target: String,
     pub segments: Vec<String>,
 }
@@ -245,7 +294,8 @@ pub(crate) struct InternalResolution {
 #[cfg(test)]
 mod tests {
     use super::{
-        DependencyExtraction, DependencyReference, ExtractionDiagnostic, ExtractionDiagnosticKind,
+        DependencyExtraction, DependencyReference, DependencyTarget, ExtractionDiagnostic,
+        ExtractionDiagnosticKind,
     };
     use crate::ImportKind;
 
@@ -254,7 +304,7 @@ mod tests {
         let reference = DependencyReference::new(
             "src/lib.rs",
             "crate::api::Handler",
-            Some("src/api.rs".to_owned()),
+            Some(DependencyTarget::Internal("src/api.rs".to_owned())),
             ImportKind::PathReference,
             4,
         );
