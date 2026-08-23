@@ -4,6 +4,7 @@
 mod checkable;
 mod common;
 mod files;
+mod testing;
 mod violation;
 
 pub use checkable::{CheckResult, Checkable};
@@ -41,4 +42,5 @@ pub use files::fluentapi::{
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
 };
+pub use testing::{ColorChoice, ColorUtils, TestResult, TestResultOptions, TestViolation};
 pub use violation::{Violation, ViolationKind};
