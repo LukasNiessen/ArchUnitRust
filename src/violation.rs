@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::common::assertion::EmptyTestViolation;
-use crate::files::assertion::{CycleViolation, FilePatternViolation};
+use crate::files::assertion::{CycleViolation, FileDependencyViolation, FilePatternViolation};
 
 /// The machine-readable family of a [`Violation`].
 ///
@@ -17,6 +17,8 @@ pub enum ViolationKind {
     Cycle,
     /// A selected file disagrees with a filename, folder, or path pattern.
     FilePattern,
+    /// An internal file dependency disagrees with an allowlist or denylist rule.
+    FileDependency,
 }
 
 impl ViolationKind {
@@ -27,6 +29,7 @@ impl ViolationKind {
             Self::EmptyTest => "empty-test",
             Self::Cycle => "cycle",
             Self::FilePattern => "file-pattern",
+            Self::FileDependency => "file-dependency",
         }
     }
 }
@@ -50,6 +53,8 @@ pub enum Violation {
     Cycle(CycleViolation),
     /// A file disagrees with a name or location predicate.
     FilePattern(FilePatternViolation),
+    /// An internal dependency disagrees with a relational file rule.
+    FileDependency(FileDependencyViolation),
 }
 
 impl Violation {
@@ -60,6 +65,7 @@ impl Violation {
             Self::EmptyTest(_) => ViolationKind::EmptyTest,
             Self::Cycle(_) => ViolationKind::Cycle,
             Self::FilePattern(_) => ViolationKind::FilePattern,
+            Self::FileDependency(_) => ViolationKind::FileDependency,
         }
     }
 
@@ -68,7 +74,7 @@ impl Violation {
     pub const fn as_empty_test(&self) -> Option<&EmptyTestViolation> {
         match self {
             Self::EmptyTest(violation) => Some(violation),
-            Self::Cycle(_) | Self::FilePattern(_) => None,
+            Self::Cycle(_) | Self::FilePattern(_) | Self::FileDependency(_) => None,
         }
     }
 
@@ -77,7 +83,7 @@ impl Violation {
     pub const fn as_cycle(&self) -> Option<&CycleViolation> {
         match self {
             Self::Cycle(violation) => Some(violation),
-            Self::EmptyTest(_) | Self::FilePattern(_) => None,
+            Self::EmptyTest(_) | Self::FilePattern(_) | Self::FileDependency(_) => None,
         }
     }
 
@@ -86,7 +92,16 @@ impl Violation {
     pub const fn as_file_pattern(&self) -> Option<&FilePatternViolation> {
         match self {
             Self::FilePattern(violation) => Some(violation),
-            Self::EmptyTest(_) | Self::Cycle(_) => None,
+            Self::EmptyTest(_) | Self::Cycle(_) | Self::FileDependency(_) => None,
+        }
+    }
+
+    /// Returns the file-dependency data when this is a file-dependency violation.
+    #[must_use]
+    pub const fn as_file_dependency(&self) -> Option<&FileDependencyViolation> {
+        match self {
+            Self::FileDependency(violation) => Some(violation),
+            Self::EmptyTest(_) | Self::Cycle(_) | Self::FilePattern(_) => None,
         }
     }
 }
@@ -109,12 +124,18 @@ impl From<FilePatternViolation> for Violation {
     }
 }
 
+impl From<FileDependencyViolation> for Violation {
+    fn from(violation: FileDependencyViolation) -> Self {
+        Self::FileDependency(violation)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Violation, ViolationKind};
     use crate::{
-        CycleViolation, Edge, EmptyTestViolation, FilePatternViolation, Graph, ProjectedEdge,
-        RegexFactory, project_to_nodes,
+        CycleViolation, Edge, EmptyTestViolation, FileDependencyViolation, FilePatternViolation,
+        Graph, ImportKind, ProjectedEdge, RegexFactory, project_to_nodes,
     };
 
     #[test]
@@ -146,6 +167,7 @@ mod tests {
         assert!(violation.as_cycle().is_some());
         assert!(violation.as_empty_test().is_none());
         assert!(violation.as_file_pattern().is_none());
+        assert!(violation.as_file_dependency().is_none());
     }
 
     #[test]
@@ -162,6 +184,21 @@ mod tests {
         assert_eq!(violation.kind(), ViolationKind::FilePattern);
         assert_eq!(violation.kind().as_str(), "file-pattern");
         assert!(violation.as_file_pattern().is_some());
+        assert!(violation.as_cycle().is_none());
+        assert!(violation.as_empty_test().is_none());
+        assert!(violation.as_file_dependency().is_none());
+    }
+
+    #[test]
+    fn file_dependency_has_a_stable_kind_and_typed_accessor() {
+        let raw = Edge::new("src/api.rs", "src/db.rs", false, [ImportKind::Use]);
+        let edge = ProjectedEdge::new("src/api.rs", "src/db.rs", [raw]);
+        let violation = Violation::from(FileDependencyViolation::new(edge, true));
+
+        assert_eq!(violation.kind(), ViolationKind::FileDependency);
+        assert_eq!(violation.kind().as_str(), "file-dependency");
+        assert!(violation.as_file_dependency().is_some());
+        assert!(violation.as_file_pattern().is_none());
         assert!(violation.as_cycle().is_none());
         assert!(violation.as_empty_test().is_none());
     }
