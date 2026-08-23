@@ -35,6 +35,25 @@ extern crate proc_macro as tokens;
 use macro_tools as macros_alias;
 use wire_format as serialization;
 
+mod ignore_cases {
+    use ignored_inline::Thing; // archunit: ignore
+    use crate::api as ignored_alias; // archunit: ignore
+    // archunit: ignore ignored_preceding
+    pub use ignored_preceding::Thing;
+    use grouped::{Ignored, Kept}; // archunit: ignore grouped::Ignored
+    extern crate ignored_extern; // archunit: ignore
+    // archunit: ignore
+    mod ignored_mod {
+        pub fn still_parsed() {}
+    }
+    use mismatch::Thing; // archunit: ignore something_else
+    use lookalike::Thing; // archunit ignore
+
+    pub fn binding_still_resolves() -> ignored_alias::Handler {
+        ignored_alias::Handler
+    }
+}
+
 pub fn library_value() -> usize {
     use crate::api::model::Model as BlockModel;
 
