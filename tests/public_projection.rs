@@ -3,8 +3,16 @@ use std::path::PathBuf;
 use archunit::{
     Edge, Graph, ImportKind, MapFunction, MappedEdge, NodeProjectionOptions, ProjectLocator,
     SourceOptions, extract_graph, identity, locate_project_from, per_edge, per_external_edge,
-    per_internal_edge, project_edges, project_to_nodes, project_to_nodes_with_options,
+    per_internal_edge, project_cycles, project_edges, project_internal_cycles, project_to_nodes,
+    project_to_nodes_with_options,
 };
+
+fn fixture_project() -> archunit::CargoProject {
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
+    locate_project_from(&ProjectLocator::from_path(fixture))
+        .expect("fixture workspace should be discoverable")
+}
 
 #[test]
 fn public_map_hook_filters_relabels_and_preserves_raw_evidence() {
@@ -87,10 +95,7 @@ fn public_node_projection_retains_files_and_controls_external_targets() {
 
 #[test]
 fn extracted_cargo_graph_flows_through_the_public_projection_layer() {
-    let fixture =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/extraction_workspace");
-    let project = locate_project_from(&ProjectLocator::from_path(fixture))
-        .expect("fixture workspace should be discoverable");
+    let project = fixture_project();
     let extraction = extract_graph(&project, SourceOptions::default())
         .expect("fixture workspace should extract");
 
@@ -122,4 +127,37 @@ fn extracted_cargo_graph_flows_through_the_public_projection_layer() {
     assert!(grouped[0].cumulated_edges.iter().all(|edge| {
         edge.source == "crates/app/source/library.rs" && !edge.external && !edge.is_self_edge()
     }));
+}
+
+#[test]
+fn public_cycle_projection_detects_a_real_rust_module_cycle() {
+    let extraction = extract_graph(&fixture_project(), SourceOptions::default())
+        .expect("fixture workspace should extract");
+
+    let raw_cycles = project_internal_cycles(extraction.graph());
+    let projected = project_edges(extraction.graph(), per_internal_edge());
+    let projected_cycles = project_cycles(&projected);
+
+    assert_eq!(raw_cycles, projected_cycles);
+    let expected_pairs = [
+        ("crates/app/source/api.rs", "crates/app/source/api/model.rs"),
+        ("crates/app/source/api/model.rs", "crates/app/source/api.rs"),
+    ];
+    let module_cycle = raw_cycles
+        .iter()
+        .find(|cycle| {
+            cycle.len() == expected_pairs.len()
+                && expected_pairs.iter().all(|(source, target)| {
+                    cycle
+                        .iter()
+                        .any(|edge| edge.source_label == *source && edge.target_label == *target)
+                })
+        })
+        .expect("the fixture's outlined model and parent module should form a cycle");
+
+    assert!(
+        module_cycle
+            .iter()
+            .all(|edge| !edge.cumulated_edges.is_empty())
+    );
 }
