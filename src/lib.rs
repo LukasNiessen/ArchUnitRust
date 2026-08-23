@@ -42,5 +42,7 @@ pub use files::fluentapi::{
     NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder, files,
     files_in, project_files, project_files_in,
 };
-pub use testing::{ColorChoice, ColorUtils, TestResult, TestResultOptions, TestViolation};
+pub use testing::{
+    ColorChoice, ColorUtils, TestResult, TestResultOptions, TestViolation, ViolationFactory,
+};
 pub use violation::{Violation, ViolationKind};
