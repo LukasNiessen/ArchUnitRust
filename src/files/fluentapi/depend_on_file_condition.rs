@@ -72,19 +72,19 @@ impl DependOnFileCondition {
     }
 
     /// Further restricts dependency targets by filename using AND semantics.
-    pub fn with_name(self, pattern: impl AsRef<str>) -> Self {
+    pub fn with_name(self, pattern: impl Into<crate::PatternSpec>) -> Self {
         let filter = RegexFactory::default().filename_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Further restricts dependency targets by containing folder using AND semantics.
-    pub fn in_folder(self, pattern: impl AsRef<str>) -> Self {
+    pub fn in_folder(self, pattern: impl Into<crate::PatternSpec>) -> Self {
         let filter = RegexFactory::default().folder_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Further restricts dependency targets by complete path using AND semantics.
-    pub fn in_path(self, pattern: impl AsRef<str>) -> Self {
+    pub fn in_path(self, pattern: impl Into<crate::PatternSpec>) -> Self {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.with_filter(filter)
     }

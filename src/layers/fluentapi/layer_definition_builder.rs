@@ -19,13 +19,13 @@ impl LayerDefinitionBuilder {
     }
 
     /// Assigns files whose complete normalized path matches `pattern` to this layer.
-    pub fn defined_by(self, pattern: impl AsRef<str>) -> LayeredArchitecture {
+    pub fn defined_by(self, pattern: impl Into<crate::PatternSpec>) -> LayeredArchitecture {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.add_filter(filter, "path")
     }
 
     /// Assigns files whose containing directory matches `pattern` to this layer.
-    pub fn defined_by_folder(self, pattern: impl AsRef<str>) -> LayeredArchitecture {
+    pub fn defined_by_folder(self, pattern: impl Into<crate::PatternSpec>) -> LayeredArchitecture {
         let filter = RegexFactory::default().folder_matcher(pattern);
         self.add_filter(filter, "folder")
     }

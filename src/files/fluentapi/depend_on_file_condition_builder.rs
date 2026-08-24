@@ -44,19 +44,19 @@ impl DependOnFileConditionBuilder {
     }
 
     /// Selects dependency targets whose final path segment matches `pattern`.
-    pub fn with_name(self, pattern: impl AsRef<str>) -> DependOnFileCondition {
+    pub fn with_name(self, pattern: impl Into<crate::PatternSpec>) -> DependOnFileCondition {
         let filter = RegexFactory::default().filename_matcher(pattern);
         DependOnFileCondition::new(self, filter)
     }
 
     /// Selects dependency targets whose containing folder matches `pattern`.
-    pub fn in_folder(self, pattern: impl AsRef<str>) -> DependOnFileCondition {
+    pub fn in_folder(self, pattern: impl Into<crate::PatternSpec>) -> DependOnFileCondition {
         let filter = RegexFactory::default().folder_matcher(pattern);
         DependOnFileCondition::new(self, filter)
     }
 
     /// Selects dependency targets whose complete normalized path matches `pattern`.
-    pub fn in_path(self, pattern: impl AsRef<str>) -> DependOnFileCondition {
+    pub fn in_path(self, pattern: impl Into<crate::PatternSpec>) -> DependOnFileCondition {
         let filter = RegexFactory::default().path_matcher(pattern);
         DependOnFileCondition::new(self, filter)
     }

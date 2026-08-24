@@ -40,7 +40,7 @@ impl ProjectGraphBuilder {
     }
 
     /// Keeps matching nodes and their undirected neighbors up to `depth` hops away.
-    pub fn focus_on(mut self, pattern: impl AsRef<str>, depth: usize) -> Self {
+    pub fn focus_on(mut self, pattern: impl Into<crate::PatternSpec>, depth: usize) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.options = self.options.with_focus(filter, depth),
             Err(source) => self.record_pattern_error("focus", source),
@@ -49,7 +49,7 @@ impl ProjectGraphBuilder {
     }
 
     /// Keeps matching nodes and every transitive outgoing dependency.
-    pub fn reachable_from(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn reachable_from(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.options = self.options.with_reachable_from(filter),
             Err(source) => self.record_pattern_error("reachable-from", source),
@@ -58,7 +58,7 @@ impl ProjectGraphBuilder {
     }
 
     /// Keeps matching nodes and every transitive incoming dependent.
-    pub fn dependents_of(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn dependents_of(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.options = self.options.with_dependents_of(filter),
             Err(source) => self.record_pattern_error("dependents-of", source),
