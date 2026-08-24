@@ -1,0 +1,8 @@
+[package]
+name = "archunit-registry-consumer"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dev-dependencies]
+archunit = "=0.0.1"
