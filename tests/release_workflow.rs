@@ -90,6 +90,25 @@ fn standalone_fixture_pins_and_exercises_the_exact_registry_version() {
     assert!(architecture.contains("assert_passes!(rule);"));
 }
 
+#[test]
+fn public_installation_docs_name_the_verified_registry_version() {
+    let readme = read("README.md");
+    let guide = read("docs/index.md");
+    let plan = read("docs/PORTING_PLAN.md");
+
+    for public_entry_point in [&readme, &guide] {
+        assert!(public_entry_point.contains("cargo add --dev archunit@0.0.1"));
+        assert!(public_entry_point.contains("archunit = \"0.0.1\""));
+        assert!(!public_entry_point.contains("cargo add --dev --git"));
+        assert!(!public_entry_point.contains("not on crates.io"));
+        assert!(!public_entry_point.contains("not published on"));
+    }
+    assert!(readme.contains("https://crates.io/crates/archunit"));
+    assert!(
+        plan.contains("`archunit` 0.0.1 is published and its exact registry install is tested")
+    );
+}
+
 fn read(path: &str) -> String {
     fs::read_to_string(path)
         .unwrap_or_else(|error| panic!("failed to read {path}: {error}"))
