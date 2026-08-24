@@ -68,8 +68,10 @@ pub use layers::fluentapi::{
     project_layers, project_layers_in,
 };
 pub use metrics::assertion::{
-    CustomMetricViolation, MetricZoneViolation, gather_custom_metric_violations,
-    gather_metric_zone_violations,
+    CustomMetricViolation, MetricComparison, MetricPredicateViolation, MetricThresholdError,
+    MetricThresholdViolation, MetricZoneViolation, gather_custom_metric_violations,
+    gather_metric_predicate_violations, gather_metric_threshold_violations,
+    gather_metric_zone_violations, validate_metric_threshold,
 };
 pub use metrics::calculation::{
     ArchitecturalZone, CountMetric, DistanceInput, DistanceMetric, LcomInput, LcomMetric,
@@ -83,8 +85,9 @@ pub use metrics::extraction::{
 };
 pub use metrics::fluentapi::{
     CountMetricsBuilder, CustomMetricCondition, CustomMetricSelection, DistanceMetricSelection,
-    DistanceMetricsBuilder, LcomMetricSelection, LcomMetricsBuilder, MetricSelection,
-    MetricZoneCondition, MetricsBuilder, metrics, metrics_in,
+    DistanceMetricsBuilder, LcomMetricSelection, LcomMetricsBuilder, MetricPredicateCondition,
+    MetricSelection, MetricThresholdCondition, MetricZoneCondition, MetricsBuilder, metrics,
+    metrics_in,
 };
 pub use slices::assertion::{
     DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation,

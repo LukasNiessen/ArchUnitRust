@@ -7,7 +7,38 @@ use crate::{
     extract_project_metrics, locate_project_from,
 };
 
-use super::{CustomMetricCondition, MetricZoneCondition};
+use super::{
+    CustomMetricCondition, MetricPredicateCondition, MetricThresholdCondition, MetricZoneCondition,
+};
+
+macro_rules! metric_threshold_methods {
+    () => {
+        /// Requires every measured value to be strictly below `threshold`.
+        pub fn should_be_below(self, threshold: f64) -> MetricThresholdCondition<Self> {
+            MetricThresholdCondition::new(self, crate::MetricComparison::Below, threshold)
+        }
+
+        /// Requires every measured value to be strictly above `threshold`.
+        pub fn should_be_above(self, threshold: f64) -> MetricThresholdCondition<Self> {
+            MetricThresholdCondition::new(self, crate::MetricComparison::Above, threshold)
+        }
+
+        /// Requires every measured value to equal `threshold` exactly.
+        pub fn should_be(self, threshold: f64) -> MetricThresholdCondition<Self> {
+            MetricThresholdCondition::new(self, crate::MetricComparison::Equal, threshold)
+        }
+
+        /// Requires every measured value to be below or equal to `threshold`.
+        pub fn should_be_below_or_equal(self, threshold: f64) -> MetricThresholdCondition<Self> {
+            MetricThresholdCondition::new(self, crate::MetricComparison::BelowOrEqual, threshold)
+        }
+
+        /// Requires every measured value to be above or equal to `threshold`.
+        pub fn should_be_above_or_equal(self, threshold: f64) -> MetricThresholdCondition<Self> {
+            MetricThresholdCondition::new(self, crate::MetricComparison::AboveOrEqual, threshold)
+        }
+    };
+}
 
 /// Starts a metrics query with Cargo discovery at the working directory.
 pub fn metrics() -> MetricsBuilder {
@@ -87,9 +118,7 @@ impl MetricsBuilder {
         &self,
         check_options: &CheckOptions,
     ) -> Result<ProjectMetricsInfo, ArchUnitError> {
-        if let Some(error) = &self.configuration_error {
-            return Err(configuration_error(error.clone()));
-        }
+        self.validate_configuration()?;
 
         let project = locate_project_from(&self.project_locator)?;
         let options = SourceOptions::new().with_dev_targets(check_options.includes_test_sources());
@@ -172,9 +201,7 @@ impl MetricsBuilder {
         &self,
         check_options: &CheckOptions,
     ) -> Result<Vec<DistanceInfo>, ArchUnitError> {
-        if let Some(error) = &self.configuration_error {
-            return Err(configuration_error(error.clone()));
-        }
+        self.validate_configuration()?;
 
         let project = locate_project_from(&self.project_locator)?;
         let mut infos = extract_distance_infos(&project, check_options)?;
@@ -192,6 +219,14 @@ impl MetricsBuilder {
 
     pub(super) fn filters(&self) -> &[Filter] {
         &self.filters
+    }
+
+    pub(super) fn validate_configuration(&self) -> Result<(), ArchUnitError> {
+        if let Some(error) = &self.configuration_error {
+            Err(configuration_error(error.clone()))
+        } else {
+            Ok(())
+        }
     }
 
     fn record_custom_metric_error(&mut self, error: MetricsConfigurationError) {
@@ -242,6 +277,8 @@ impl<Calculation> CustomMetricSelection<Calculation>
 where
     Calculation: Fn(&TypeInfo) -> f64,
 {
+    metric_threshold_methods!();
+
     /// Extracts and measures selected production-source types.
     ///
     /// Panics from the custom calculation propagate normally.
@@ -310,6 +347,14 @@ where
     pub(super) fn filters(&self) -> &[Filter] {
         self.query.filters()
     }
+
+    pub(super) fn subject_label(&self) -> &'static str {
+        "metric types"
+    }
+
+    pub(super) fn validate_configuration(&self) -> Result<(), ArchUnitError> {
+        self.query.validate_configuration()
+    }
 }
 
 /// Distance formula and architectural-zone choices over file components.
@@ -372,6 +417,8 @@ pub struct DistanceMetricSelection {
 }
 
 impl DistanceMetricSelection {
+    metric_threshold_methods!();
+
     /// Extracts and measures production-source components.
     pub fn measure(&self) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
         self.measure_with(&CheckOptions::default())
@@ -390,6 +437,29 @@ impl DistanceMetricSelection {
     #[must_use]
     pub const fn metric(&self) -> DistanceMetric {
         self.metric
+    }
+
+    /// Creates a reusable predicate over each value and complete distance subject.
+    pub fn should_satisfy<Predicate>(
+        self,
+        predicate: Predicate,
+    ) -> MetricPredicateCondition<Self, Predicate>
+    where
+        Predicate: Fn(f64, &MetricSubject) -> bool,
+    {
+        MetricPredicateCondition::new(self, predicate)
+    }
+
+    pub(super) fn filters(&self) -> &[Filter] {
+        self.query.filters()
+    }
+
+    pub(super) fn subject_label(&self) -> &'static str {
+        "metric components"
+    }
+
+    pub(super) fn validate_configuration(&self) -> Result<(), ArchUnitError> {
+        self.query.validate_configuration()
     }
 }
 
@@ -458,6 +528,8 @@ pub struct LcomMetricSelection {
 }
 
 impl LcomMetricSelection {
+    metric_threshold_methods!();
+
     /// Extracts and measures eligible production-source structs.
     pub fn measure(&self) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
         self.measure_with(&CheckOptions::default())
@@ -476,6 +548,29 @@ impl LcomMetricSelection {
     #[must_use]
     pub const fn metric(&self) -> LcomMetric {
         self.metric
+    }
+
+    /// Creates a reusable predicate over each value and complete type subject.
+    pub fn should_satisfy<Predicate>(
+        self,
+        predicate: Predicate,
+    ) -> MetricPredicateCondition<Self, Predicate>
+    where
+        Predicate: Fn(f64, &MetricSubject) -> bool,
+    {
+        MetricPredicateCondition::new(self, predicate)
+    }
+
+    pub(super) fn filters(&self) -> &[Filter] {
+        self.query.filters()
+    }
+
+    pub(super) fn subject_label(&self) -> &'static str {
+        "metric types"
+    }
+
+    pub(super) fn validate_configuration(&self) -> Result<(), ArchUnitError> {
+        self.query.validate_configuration()
     }
 }
 
@@ -559,6 +654,8 @@ pub struct MetricSelection {
 }
 
 impl MetricSelection {
+    metric_threshold_methods!();
+
     /// Extracts and measures with production-source defaults.
     pub fn measure(&self) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
         self.measure_with(&CheckOptions::default())
@@ -577,6 +674,36 @@ impl MetricSelection {
     #[must_use]
     pub const fn metric(&self) -> CountMetric {
         self.metric
+    }
+
+    /// Creates a reusable predicate over each value and complete file or type subject.
+    pub fn should_satisfy<Predicate>(
+        self,
+        predicate: Predicate,
+    ) -> MetricPredicateCondition<Self, Predicate>
+    where
+        Predicate: Fn(f64, &MetricSubject) -> bool,
+    {
+        MetricPredicateCondition::new(self, predicate)
+    }
+
+    pub(super) fn filters(&self) -> &[Filter] {
+        self.query.filters()
+    }
+
+    pub(super) fn subject_label(&self) -> &'static str {
+        if matches!(
+            self.metric,
+            CountMetric::MethodCount | CountMetric::FieldCount
+        ) {
+            "metric types"
+        } else {
+            "metric files"
+        }
+    }
+
+    pub(super) fn validate_configuration(&self) -> Result<(), ArchUnitError> {
+        self.query.validate_configuration()
     }
 }
 

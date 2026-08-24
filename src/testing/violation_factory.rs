@@ -1,8 +1,9 @@
 use crate::{
     CustomFileViolation, CustomMetricViolation, CycleViolation, EmptyTestViolation,
     ExternalModuleDependencyViolation, FileDependencyViolation, FilePatternViolation,
-    LayerDependencyRule, LayerDependencyViolation, MetricZoneViolation, ProjectedEdge,
-    SliceDependencyRule, SliceDependencyViolation, TestViolation, Violation,
+    LayerDependencyRule, LayerDependencyViolation, MetricPredicateViolation,
+    MetricThresholdViolation, MetricZoneViolation, ProjectedEdge, SliceDependencyRule,
+    SliceDependencyViolation, TestViolation, Violation,
 };
 
 /// The sole mapping from structured violation data to human-readable prose.
@@ -26,6 +27,8 @@ impl ViolationFactory {
             Violation::SliceDependency(violation) => format_slice_dependency(violation),
             Violation::MetricZone(violation) => format_metric_zone(violation),
             Violation::CustomMetric(violation) => format_custom_metric(violation),
+            Violation::MetricThreshold(violation) => format_metric_threshold(violation),
+            Violation::MetricPredicate(violation) => format_metric_predicate(violation),
         }
     }
 }
@@ -233,6 +236,32 @@ fn format_custom_metric(violation: &CustomMetricViolation) -> TestViolation {
             violation.type_info.name(),
             violation.metric_name,
             violation.description,
+            violation.value
+        ),
+    )
+}
+
+fn format_metric_threshold(violation: &MetricThresholdViolation) -> TestViolation {
+    TestViolation::new(
+        "Metric threshold violation",
+        format!(
+            "Metric '{}' for '{}' was {}; expected {} {}.",
+            violation.metric_name,
+            violation.identifier(),
+            violation.value,
+            violation.comparison,
+            violation.threshold
+        ),
+    )
+}
+
+fn format_metric_predicate(violation: &MetricPredicateViolation) -> TestViolation {
+    TestViolation::new(
+        "Metric predicate violation",
+        format!(
+            "Metric '{}' for '{}' with value {} did not satisfy the custom predicate.",
+            violation.metric_name,
+            violation.identifier(),
             violation.value
         ),
     )
@@ -469,6 +498,54 @@ mod tests {
         assert_eq!(
             formatted.details,
             "Type 'Service' failed custom metric 'field_count': must have no more than zero fields (value 1)."
+        );
+    }
+
+    #[test]
+    fn formats_metric_threshold_with_exact_comparison_evidence() {
+        let type_info = extract_file_metrics("src/service.rs", "struct Service;")
+            .expect("fixture should parse")
+            .types()
+            .first()
+            .expect("fixture should contain one type")
+            .clone();
+        let violation = Violation::from(crate::MetricThresholdViolation::new(
+            crate::MetricSubject::Type(type_info),
+            "method_count",
+            4.0,
+            4.0,
+            crate::MetricComparison::Below,
+        ));
+
+        let formatted = ViolationFactory::from_violation(&violation);
+
+        assert_eq!(formatted.message, "Metric threshold violation");
+        assert_eq!(
+            formatted.details,
+            "Metric 'method_count' for 'Service' was 4; expected below 4."
+        );
+    }
+
+    #[test]
+    fn formats_metric_predicate_without_inventing_callback_prose() {
+        let type_info = extract_file_metrics("src/service.rs", "struct Service;")
+            .expect("fixture should parse")
+            .types()
+            .first()
+            .expect("fixture should contain one type")
+            .clone();
+        let violation = Violation::from(crate::MetricPredicateViolation::new(
+            crate::MetricSubject::Type(type_info),
+            "method_count",
+            4.0,
+        ));
+
+        let formatted = ViolationFactory::from_violation(&violation);
+
+        assert_eq!(formatted.message, "Metric predicate violation");
+        assert_eq!(
+            formatted.details,
+            "Metric 'method_count' for 'Service' with value 4 did not satisfy the custom predicate."
         );
     }
 }
