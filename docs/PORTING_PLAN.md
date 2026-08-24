@@ -206,6 +206,10 @@ propagate as ordinary Rust panics rather than being reclassified as violations. 
 remain the shared six. Every metric documents its population and zero-denominator behavior with
 table-driven tests.
 
+Thresholds are finite and exact; `should_be` uses `f64` equality without an implicit epsilon.
+Built-in predicates receive `MetricSubject` so count metrics can preserve their file-or-type subject
+level. The fluent vocabulary deliberately has no threshold synonyms. See ADR 0018.
+
 ## Test and quality strategy
 
 Every issue lands both kinds of tests where applicable:
