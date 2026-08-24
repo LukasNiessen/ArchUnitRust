@@ -176,7 +176,13 @@ fn site_shell_is_accessible_portable_and_excludes_architecture_records() {
     assert!(layout.contains("class=\"skip\""));
     assert!(layout.contains("<main id=\"content\""));
     assert!(layout.contains("aria-current=\"page\""));
+    assert!(layout.contains("property=\"og:image\""));
+    assert!(layout.contains("name=\"twitter:card\""));
     assert!(layout.contains("relative_url"));
+
+    let social_preview = fs::metadata("docs/assets/og.png")
+        .expect("the social preview image should be present in the site source");
+    assert!(social_preview.len() > 100_000);
 
     let css = fs::read_to_string("docs/assets/docs.css").expect("stylesheet should be readable");
     assert!(css.contains("prefers-color-scheme: dark"));
