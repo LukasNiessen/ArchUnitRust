@@ -77,6 +77,10 @@ pub use slices::projection::{
     SliceProjection, SliceProjectionError, slice_by_file_suffix, slice_by_pattern, slice_by_regex,
     slice_identity,
 };
+pub use slices::uml::{
+    PlantUmlDependency, PlantUmlDiagram, PlantUmlError, PlantUmlParser, PlantUmlRenderer,
+    export_plantuml_report,
+};
 pub use testing::{
     ColorChoice, ColorUtils, ResultFactory, TestResult, TestResultOptions, TestViolation,
     ViolationFactory,

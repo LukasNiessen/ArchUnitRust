@@ -3,3 +3,4 @@
 pub mod assertion;
 pub mod fluentapi;
 pub mod projection;
+pub mod uml;
