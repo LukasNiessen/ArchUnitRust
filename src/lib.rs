@@ -24,8 +24,8 @@ pub use common::extraction::{
 pub use common::fluentapi::CheckOptions;
 pub use common::logging::LoggingOptions;
 pub use common::matching::{
-    Filter, Pattern, PatternError, PatternOptions, PatternSyntax, PatternTarget, RegexFactory,
-    RegexFactoryOptions,
+    Filter, Pattern, PatternError, PatternExclusion, PatternOptions, PatternSpec, PatternSyntax,
+    PatternTarget, RegexFactory, RegexFactoryOptions, pattern,
 };
 pub use common::projection::{
     MapFunction, MappedEdge, NodeProjectionOptions, ProjectedCycles, ProjectedEdge, ProjectedGraph,

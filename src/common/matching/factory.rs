@@ -1,4 +1,6 @@
-use super::{Filter, Pattern, PatternError, PatternOptions, PatternSyntax, PatternTarget};
+use super::{
+    Filter, Pattern, PatternError, PatternOptions, PatternSpec, PatternSyntax, PatternTarget,
+};
 
 /// Options shared by every matcher produced by a [`RegexFactory`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -84,46 +86,73 @@ impl RegexFactory {
     }
 
     /// Matches a pattern against the last path segment.
-    pub fn filename_matcher(&self, source: impl AsRef<str>) -> Result<Filter, PatternError> {
+    pub fn filename_matcher(&self, source: impl Into<PatternSpec>) -> Result<Filter, PatternError> {
         self.matcher(source, PatternTarget::Filename)
     }
 
     /// Matches a pattern against a file's containing folder.
-    pub fn folder_matcher(&self, source: impl AsRef<str>) -> Result<Filter, PatternError> {
+    pub fn folder_matcher(&self, source: impl Into<PatternSpec>) -> Result<Filter, PatternError> {
         self.matcher(source, PatternTarget::PathWithoutFilename)
     }
 
     /// Matches a pattern against the complete normalized path.
-    pub fn path_matcher(&self, source: impl AsRef<str>) -> Result<Filter, PatternError> {
+    pub fn path_matcher(&self, source: impl Into<PatternSpec>) -> Result<Filter, PatternError> {
         self.matcher(source, PatternTarget::Path)
     }
 
     /// Matches a pattern against an unqualified Rust type name.
-    pub fn type_name_matcher(&self, source: impl AsRef<str>) -> Result<Filter, PatternError> {
+    pub fn type_name_matcher(
+        &self,
+        source: impl Into<PatternSpec>,
+    ) -> Result<Filter, PatternError> {
         self.matcher(source, PatternTarget::TypeName)
     }
 
     /// Matches exactly one normalized file path, treating every character literally.
-    pub fn exact_file_matcher(&self, path: impl AsRef<str>) -> Result<Filter, PatternError> {
+    pub fn exact_file_matcher(&self, path: impl Into<PatternSpec>) -> Result<Filter, PatternError> {
+        let specification = path.into();
         let options = PatternOptions::new().case_insensitive(self.options.case_insensitive);
-        Pattern::literal_with(path, options)
-            .map(|pattern| Filter::new(pattern, PatternTarget::Path))
+        let pattern = Pattern::literal_with(specification.source(), options)?;
+        self.bind_exclusions(
+            Filter::new(pattern, PatternTarget::Path),
+            &specification,
+            PatternTarget::Path,
+        )
     }
 
     fn matcher(
         &self,
-        source: impl AsRef<str>,
+        source: impl Into<PatternSpec>,
         target: PatternTarget,
     ) -> Result<Filter, PatternError> {
-        self.compile(source)
-            .map(|pattern| Filter::new(pattern, target))
+        let specification = source.into();
+        let pattern = self.compile(specification.source())?;
+        self.bind_exclusions(Filter::new(pattern, target), &specification, target)
+    }
+
+    fn bind_exclusions(
+        &self,
+        filter: Filter,
+        specification: &PatternSpec,
+        parent_target: PatternTarget,
+    ) -> Result<Filter, PatternError> {
+        let exclusions = specification
+            .exclusions()
+            .iter()
+            .map(|exclusion| {
+                self.compile(exclusion.source()).map(|pattern| {
+                    Filter::new(pattern, exclusion.target().unwrap_or(parent_target))
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(filter.with_exclusions(exclusions))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{RegexFactory, RegexFactoryOptions};
-    use crate::{PatternSyntax, PatternTarget};
+    use crate::{PatternSyntax, PatternTarget, pattern};
 
     #[test]
     fn defaults_to_case_sensitive_globs() {
@@ -228,5 +257,40 @@ mod tests {
         assert!(factory.path_matcher("").is_err());
         assert!(factory.type_name_matcher("[Type").is_err());
         assert!(factory.exact_file_matcher(" ").is_err());
+    }
+
+    #[test]
+    fn compiles_plain_and_targeted_exclusions_with_factory_options() {
+        let factory = RegexFactory::new(
+            RegexFactoryOptions::new()
+                .syntax(PatternSyntax::Regex)
+                .case_insensitive(true),
+        );
+        let filter = factory
+            .path_matcher(
+                pattern(r"src/.*")
+                    .except(r"src/generated/.*")
+                    .except_with_name(r".*_generated\.rs"),
+            )
+            .expect("fixture expressions should compile");
+
+        assert!(filter.matches("SRC/domain/service.rs"));
+        assert!(!filter.matches("src/GENERATED/model.rs"));
+        assert!(!filter.matches("src/domain/MODEL_GENERATED.RS"));
+        assert_eq!(filter.exclusions()[0].target(), PatternTarget::Path);
+        assert_eq!(filter.exclusions()[1].target(), PatternTarget::Filename);
+        assert_eq!(
+            filter.exclusions()[0].pattern().syntax(),
+            PatternSyntax::Regex
+        );
+    }
+
+    #[test]
+    fn invalid_exclusions_are_reported_after_a_valid_parent() {
+        let error = RegexFactory::default()
+            .path_matcher(pattern("src/**").except("src/[generated"))
+            .expect_err("invalid exclusion should fail the selector");
+
+        assert_eq!(error.pattern(), "src/[generated");
     }
 }

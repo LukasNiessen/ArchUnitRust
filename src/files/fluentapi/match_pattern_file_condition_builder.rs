@@ -51,19 +51,19 @@ impl MatchPatternFileConditionBuilder {
     }
 
     /// Requires every selected file's final path segment to match `pattern`.
-    pub fn have_name(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+    pub fn have_name(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().filename_matcher(pattern);
         self.matching(check_filter)
     }
 
     /// Requires every selected file's containing folder to match `pattern`.
-    pub fn be_in_folder(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+    pub fn be_in_folder(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().folder_matcher(pattern);
         self.matching(check_filter)
     }
 
     /// Requires every selected file's complete normalized path to match `pattern`.
-    pub fn be_in_path(self, pattern: impl AsRef<str>) -> MatchPatternFileCondition {
+    pub fn be_in_path(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().path_matcher(pattern);
         self.matching(check_filter)
     }

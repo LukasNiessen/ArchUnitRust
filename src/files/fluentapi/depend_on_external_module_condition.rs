@@ -75,7 +75,7 @@ impl DependOnExternalModuleCondition {
     }
 
     /// Adds another external crate pattern using OR semantics.
-    pub fn matching(self, pattern: impl AsRef<str>) -> Self {
+    pub fn matching(self, pattern: impl Into<crate::PatternSpec>) -> Self {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.with_filter(filter)
     }

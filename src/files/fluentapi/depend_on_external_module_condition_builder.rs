@@ -44,7 +44,10 @@ impl DependOnExternalModuleConditionBuilder {
     }
 
     /// Selects external crate names matching `pattern`.
-    pub fn matching(self, pattern: impl AsRef<str>) -> DependOnExternalModuleCondition {
+    pub fn matching(
+        self,
+        pattern: impl Into<crate::PatternSpec>,
+    ) -> DependOnExternalModuleCondition {
         let filter = RegexFactory::default().path_matcher(pattern);
         DependOnExternalModuleCondition::new(self, filter)
     }

@@ -69,7 +69,7 @@ impl MetricsBuilder {
     }
 
     /// Keeps source files whose final path segment matches `pattern`.
-    pub fn with_name(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn with_name(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         match RegexFactory::default().filename_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("with_name", source),
@@ -78,7 +78,7 @@ impl MetricsBuilder {
     }
 
     /// Keeps source files whose containing folder matches `pattern`.
-    pub fn in_folder(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn in_folder(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         match RegexFactory::default().folder_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("in_folder", source),
@@ -87,7 +87,7 @@ impl MetricsBuilder {
     }
 
     /// Keeps source files whose normalized project path matches `pattern`.
-    pub fn in_path(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn in_path(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("in_path", source),
@@ -100,7 +100,7 @@ impl MetricsBuilder {
     /// When present, files without a matching type are omitted. File-level type and trait counts
     /// describe only the retained declarations; source-wide counts such as lines and imports remain
     /// properties of the containing file.
-    pub fn for_types_matching(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn for_types_matching(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         match RegexFactory::default().type_name_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("for_types_matching", source),

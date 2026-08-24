@@ -11,6 +11,7 @@ pub struct Filter {
     pattern: Pattern,
     target: PatternTarget,
     matching: bool,
+    exclusions: Vec<Filter>,
 }
 
 impl Filter {
@@ -21,7 +22,15 @@ impl Filter {
             pattern,
             target,
             matching: true,
+            exclusions: Vec::new(),
         }
+    }
+
+    /// Returns this filter with hard exclusions evaluated after the parent match.
+    #[must_use]
+    pub fn with_exclusions(mut self, exclusions: impl IntoIterator<Item = Filter>) -> Self {
+        self.exclusions.extend(exclusions);
+        self
     }
 
     /// Returns a filter with the pattern's meaning inverted.
@@ -43,6 +52,12 @@ impl Filter {
         self.target
     }
 
+    /// Returns hard exclusions in declaration order.
+    #[must_use]
+    pub fn exclusions(&self) -> &[Filter] {
+        &self.exclusions
+    }
+
     /// Returns whether this filter selects `identifier`.
     #[must_use]
     pub fn matches(&self, identifier: &str) -> bool {
@@ -50,6 +65,10 @@ impl Filter {
             return false;
         };
         self.pattern.matches(&candidate) == self.matching
+            && !self
+                .exclusions
+                .iter()
+                .any(|exclusion| exclusion.matches(identifier))
     }
 }
 
@@ -60,7 +79,18 @@ impl fmt::Display for Filter {
         } else {
             "does not match"
         };
-        write!(formatter, "{} {verb} {}", self.target, self.pattern)
+        write!(formatter, "{} {verb} {}", self.target, self.pattern)?;
+        if !self.exclusions.is_empty() {
+            write!(formatter, " except (")?;
+            for (index, exclusion) in self.exclusions.iter().enumerate() {
+                if index > 0 {
+                    write!(formatter, ", ")?;
+                }
+                write!(formatter, "{exclusion}")?;
+            }
+            write!(formatter, ")")?;
+        }
+        Ok(())
     }
 }
 
@@ -130,5 +160,35 @@ mod tests {
 
         assert_eq!(filter.pattern().source(), r"[A-Z][A-Za-z]+Handler");
         assert_eq!(filter.target(), PatternTarget::TypeName);
+        assert!(filter.exclusions().is_empty());
+    }
+
+    #[test]
+    fn exclusions_are_hard_filters_and_may_use_other_targets() {
+        let filter = Filter::new(
+            Pattern::glob("src/**").expect("fixture glob should compile"),
+            PatternTarget::Path,
+        )
+        .with_exclusions([
+            Filter::new(
+                Pattern::glob("src/generated/**").expect("fixture glob should compile"),
+                PatternTarget::Path,
+            ),
+            Filter::new(
+                Pattern::glob("*_generated.rs").expect("fixture glob should compile"),
+                PatternTarget::Filename,
+            ),
+        ]);
+
+        assert!(filter.matches("src/domain/service.rs"));
+        assert!(!filter.matches("src/generated/model.rs"));
+        assert!(!filter.matches("src/domain/model_generated.rs"));
+        assert!(
+            !filter
+                .clone()
+                .not_matching()
+                .matches("src/generated/model.rs")
+        );
+        assert!(filter.to_string().contains("except ("));
     }
 }
