@@ -22,7 +22,9 @@ pub use common::extraction::{
     extract_graph_with_options, locate_project, locate_project_from,
 };
 pub use common::fluentapi::CheckOptions;
-pub use common::logging::LoggingOptions;
+pub use common::logging::{
+    CheckLogger, LogEventKind, LogFileMode, LogLevel, LogRecord, LoggingOptions,
+};
 pub use common::matching::{
     Filter, Pattern, PatternError, PatternExclusion, PatternOptions, PatternSpec, PatternSyntax,
     PatternTarget, RegexFactory, RegexFactoryOptions, pattern,

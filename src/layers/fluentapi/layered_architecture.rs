@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, LayerDefinition, PatternError,
     ProjectLocator, UserError, Violation, extract_graph_with_options, gather_empty_test_violations,
@@ -235,52 +236,61 @@ impl LayeredArchitecture {
 
 impl Checkable for LayeredArchitecture {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        if let Some(error) = &self.configuration_error {
-            return Err(error.to_archunit_error());
-        }
-
-        let project = locate_project_from(self.project_locator())?;
-        let extraction = extract_graph_with_options(&project, options)?;
-        let nodes = project_to_nodes(extraction.graph());
-        let mut violations = Vec::new();
-
-        for source_layer in self.policy_source_layers() {
-            if let Some(definition) = self
-                .layer_definitions
-                .iter()
-                .find(|definition| definition.name == source_layer)
-            {
-                let selected = nodes
-                    .iter()
-                    .filter(|node| definition.matches(&node.label))
-                    .collect::<Vec<_>>();
-                violations.extend(
-                    gather_empty_test_violations(
-                        &selected,
-                        format!("layer '{source_layer}'"),
-                        &definition.filters,
-                        false,
-                        options.allows_empty_tests(),
-                    )
-                    .into_iter()
-                    .map(Violation::from),
-                );
+        execute_logged_check("layers.dependencies", options, |logger| {
+            if let Some(error) = &self.configuration_error {
+                return Err(error.to_archunit_error());
             }
-        }
 
-        let edges = project_edges(extraction.graph(), per_internal_edge());
-        violations.extend(
-            gather_layer_dependency_violations(
-                &edges,
-                &self.layer_definitions,
-                &self.allowed_dependencies,
-                &self.forbidden_dependencies,
-            )
-            .into_iter()
-            .map(Violation::from),
-        );
+            logger.log_progress("extracting project graph")?;
+            let project = locate_project_from(self.project_locator())?;
+            let extraction = extract_graph_with_options(&project, options)?;
+            let nodes = project_to_nodes(extraction.graph());
+            logger.log_progress(format!("project files={}", nodes.len()))?;
+            let mut violations = Vec::new();
 
-        Ok(violations)
+            for source_layer in self.policy_source_layers() {
+                if let Some(definition) = self
+                    .layer_definitions
+                    .iter()
+                    .find(|definition| definition.name == source_layer)
+                {
+                    let selected = nodes
+                        .iter()
+                        .filter(|node| definition.matches(&node.label))
+                        .collect::<Vec<_>>();
+                    logger.log_progress(format!(
+                        "layer {source_layer}; selected files={}",
+                        selected.len()
+                    ))?;
+                    violations.extend(
+                        gather_empty_test_violations(
+                            &selected,
+                            format!("layer '{source_layer}'"),
+                            &definition.filters,
+                            false,
+                            options.allows_empty_tests(),
+                        )
+                        .into_iter()
+                        .map(Violation::from),
+                    );
+                }
+            }
+
+            let edges = project_edges(extraction.graph(), per_internal_edge());
+            logger.log_progress(format!("internal dependencies={}", edges.len()))?;
+            violations.extend(
+                gather_layer_dependency_violations(
+                    &edges,
+                    &self.layer_definitions,
+                    &self.allowed_dependencies,
+                    &self.forbidden_dependencies,
+                )
+                .into_iter()
+                .map(Violation::from),
+            );
+
+            Ok(violations)
+        })
     }
 }
 

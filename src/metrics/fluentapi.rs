@@ -2,6 +2,7 @@
 
 mod builder;
 mod custom_metric_condition;
+mod logging;
 mod metric_predicate_condition;
 mod metric_threshold_condition;
 mod metric_zone_condition;

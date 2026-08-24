@@ -1,11 +1,12 @@
 use std::path::Path;
 
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchitecturalZone, CheckOptions, CheckResult, Checkable, ProjectLocator, Violation,
     gather_empty_test_violations, gather_metric_zone_violations,
 };
 
-use super::MetricsBuilder;
+use super::{MetricsBuilder, logging::log_measurements};
 
 /// Executable distance rule that rejects one architectural zone.
 #[derive(Debug, Clone)]
@@ -43,21 +44,33 @@ impl MetricZoneCondition {
 
 impl Checkable for MetricZoneCondition {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        let infos = self.query.distance_infos_with(options)?;
-        let empty = gather_empty_test_violations(
-            &infos,
-            "metric components",
-            self.query.filters(),
-            false,
-            options.allows_empty_tests(),
-        );
-        if let Some(violation) = empty.into_iter().next() {
-            return Ok(vec![Violation::from(violation)]);
-        }
+        execute_logged_check("metrics.zone", options, |logger| {
+            logger.log_progress("calculating component distance values")?;
+            let infos = self.query.distance_infos_with(options)?;
+            logger.log_progress(format!("metric components={}", infos.len()))?;
+            let empty = gather_empty_test_violations(
+                &infos,
+                "metric components",
+                self.query.filters(),
+                false,
+                options.allows_empty_tests(),
+            );
+            if let Some(violation) = empty.into_iter().next() {
+                return Ok(vec![Violation::from(violation)]);
+            }
 
-        Ok(gather_metric_zone_violations(&infos, self.zone)
+            let measurements = [
+                crate::DistanceMetric::Abstractness,
+                crate::DistanceMetric::Instability,
+            ]
             .into_iter()
-            .map(Violation::from)
-            .collect())
+            .flat_map(|metric| metric.measurements(&infos))
+            .collect::<Vec<_>>();
+            log_measurements(logger, &measurements, None)?;
+            Ok(gather_metric_zone_violations(&infos, self.zone)
+                .into_iter()
+                .map(Violation::from)
+                .collect())
+        })
     }
 }

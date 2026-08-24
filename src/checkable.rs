@@ -1,5 +1,6 @@
 //! The execution contract shared by every terminal architecture rule.
 
+use crate::CheckLogger;
 use crate::common::error::ArchUnitError;
 use crate::common::fluentapi::CheckOptions;
 use crate::violation::Violation;
@@ -9,6 +10,33 @@ use crate::violation::Violation;
 /// `Ok(Vec::new())` passes, `Ok` with violations is an architecture disagreement, and `Err` means
 /// no verdict could be reached.
 pub type CheckResult = Result<Vec<Violation>, ArchUnitError>;
+
+pub(crate) fn execute_logged_check<Operation>(
+    rule_name: &'static str,
+    options: &CheckOptions,
+    operation: Operation,
+) -> CheckResult
+where
+    Operation: FnOnce(&CheckLogger<'_>) -> CheckResult,
+{
+    let logger = CheckLogger::new(options.logging());
+    logger.validate()?;
+    logger.start_check(rule_name)?;
+    let result = operation(&logger);
+    match result {
+        Ok(violations) => {
+            for violation in &violations {
+                logger.log_violation(violation.kind().as_str())?;
+            }
+            logger.end_check(rule_name, violations.len())?;
+            Ok(violations)
+        }
+        Err(error) => {
+            let _ = logger.error(format!("{rule_name}: {error}"));
+            Err(error)
+        }
+    }
+}
 
 /// A terminal architecture rule that can judge a project.
 ///

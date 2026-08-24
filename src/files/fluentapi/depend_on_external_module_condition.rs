@@ -1,3 +1,4 @@
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, PatternError, ProjectLocator,
     RegexFactory, UserError, extract_graph_with_options,
@@ -95,39 +96,44 @@ impl DependOnExternalModuleCondition {
 
 impl Checkable for DependOnExternalModuleCondition {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        if let Some(error) = self.builder.selector_error() {
-            return Err(ArchUnitError::from(UserError::with_source(
-                "the file scope contains an invalid selector",
-                error.clone(),
-            )));
-        }
-        if let Some(error) = &self.module_selector_error {
-            return Err(ArchUnitError::from(UserError::with_source(
-                "the external module target contains an invalid selector",
-                error.clone(),
-            )));
-        }
+        execute_logged_check("files.external-dependencies", options, |logger| {
+            if let Some(error) = self.builder.selector_error() {
+                return Err(ArchUnitError::from(UserError::with_source(
+                    "the file scope contains an invalid selector",
+                    error.clone(),
+                )));
+            }
+            if let Some(error) = &self.module_selector_error {
+                return Err(ArchUnitError::from(UserError::with_source(
+                    "the external module target contains an invalid selector",
+                    error.clone(),
+                )));
+            }
 
-        let project = locate_project_from(self.project_locator())?;
-        let extraction = extract_graph_with_options(&project, options)?;
-        let selected = selected_nodes(extraction.graph(), self.subject_filters());
-        if let Some(violation) = empty_selection_violation(
-            &selected,
-            self.subject_filters(),
-            self.is_negated(),
-            options,
-        ) {
-            return Ok(vec![violation]);
-        }
+            logger.log_progress("extracting project graph")?;
+            let project = locate_project_from(self.project_locator())?;
+            let extraction = extract_graph_with_options(&project, options)?;
+            let selected = selected_nodes(extraction.graph(), self.subject_filters());
+            logger.log_progress(format!("selected files={}", selected.len()))?;
+            if let Some(violation) = empty_selection_violation(
+                &selected,
+                self.subject_filters(),
+                self.is_negated(),
+                options,
+            ) {
+                return Ok(vec![violation]);
+            }
 
-        let edges = project_edges(extraction.graph(), per_external_edge());
+            let edges = project_edges(extraction.graph(), per_external_edge());
+            logger.log_progress(format!("external dependencies={}", edges.len()))?;
 
-        Ok(gather_external_module_dependency_violations(
-            &edges,
-            self.subject_filters(),
-            self.module_filters(),
-            self.is_negated(),
-        ))
+            Ok(gather_external_module_dependency_violations(
+                &edges,
+                self.subject_filters(),
+                self.module_filters(),
+                self.is_negated(),
+            ))
+        })
     }
 }
 

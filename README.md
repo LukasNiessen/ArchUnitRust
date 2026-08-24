@@ -260,6 +260,55 @@ snapshot. `MetricsExporter` also renders or writes a `MetricsReportData` map dir
 no scripts or network dependencies; names, values, and titles are HTML-escaped. Timestamps are UTC
 and can be disabled for byte-stable build artifacts. Custom CSS replaces the built-in stylesheet.
 
+## Per-check logging
+
+Checks are quiet by default. Logging is enabled only by putting a `LoggingOptions` value into the
+`CheckOptions` passed to that check; the crate never reads a global logger or an environment
+variable:
+
+```rust,no_run
+use archunit::{
+    ArchUnitError, CheckOptions, Checkable, LogFileMode, LogLevel, LoggingOptions, project_files,
+};
+
+fn check_boundaries() -> Result<(), ArchUnitError> {
+    let logging = LoggingOptions::new()
+        .with_level(LogLevel::Debug)
+        .with_console_output(false)
+        .with_file_output("target/architecture-logs")
+        .with_file_mode(LogFileMode::Overwrite);
+    let log_path = logging
+        .file_path()
+        .expect("file output exposes its artifact path")
+        .to_path_buf();
+    let options = CheckOptions::new().with_logging(logging);
+    let rule = project_files()
+        .in_folder("src/api/**")
+        .should_not()
+        .depend_on_files()
+        .in_folder("src/database/**");
+
+    let violations = rule.check_with(&options)?;
+    println!("CI log: {}", log_path.display());
+    assert!(violations.is_empty());
+    Ok(())
+}
+```
+
+`LoggingOptions::new()` logs at `Info` level to the console. `Debug` adds progress and metric
+records; violations and failed verdicts use `Warn`, while execution errors use `Error`. The fixed
+event vocabulary is `start check`, `end check`, `log progress`, `log violation`, and `log metric`.
+Ordinary `debug`, `info`, `warn`, and `error` records are also available through `CheckLogger` for
+custom `Checkable` implementations.
+
+File output creates missing directories and chooses a collision-resistant, UTC-timestamped `.log`
+filename. `file_path()` exposes that path before execution so CI can archive it. `Append` preserves
+an existing file; `Overwrite` truncates it once before the first record. Clones of one configuration
+share only the lock and initialization state for that explicit file, making concurrent checks safe
+without introducing ambient process state. A logger with neither console nor file output is a user
+configuration error detected before project discovery. Filesystem and console failures are
+technical check errors rather than silently lost diagnostics.
+
 ## Named layer policies
 
 Layers turn a set of file selectors into a compact dependency policy. The target list is a borrowed

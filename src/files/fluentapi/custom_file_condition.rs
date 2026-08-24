@@ -1,5 +1,6 @@
 use std::{fmt, sync::Arc};
 
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, FileInfo, FilePredicate, Filter,
     MatchPatternFileConditionBuilder, PatternError, ProjectLocator, UserError,
@@ -88,38 +89,42 @@ impl fmt::Debug for CustomFileCondition {
 
 impl Checkable for CustomFileCondition {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        if let Some(error) = self.selector_error() {
-            return Err(ArchUnitError::from(UserError::with_source(
-                "the file scope contains an invalid selector",
-                error.clone(),
-            )));
-        }
-        if self.message.trim().is_empty() {
-            return Err(ArchUnitError::from(UserError::new(
-                "the custom file predicate message must not be blank",
-            )));
-        }
+        execute_logged_check("files.custom-predicate", options, |logger| {
+            if let Some(error) = self.selector_error() {
+                return Err(ArchUnitError::from(UserError::with_source(
+                    "the file scope contains an invalid selector",
+                    error.clone(),
+                )));
+            }
+            if self.message.trim().is_empty() {
+                return Err(ArchUnitError::from(UserError::new(
+                    "the custom file predicate message must not be blank",
+                )));
+            }
 
-        let project = locate_project_from(self.project_locator())?;
-        let extraction = extract_graph_with_options(&project, options)?;
-        let selected = selected_nodes(extraction.graph(), self.filters());
-        if let Some(violation) =
-            empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
-        {
-            return Ok(vec![violation]);
-        }
+            logger.log_progress("extracting project graph")?;
+            let project = locate_project_from(self.project_locator())?;
+            let extraction = extract_graph_with_options(&project, options)?;
+            let selected = selected_nodes(extraction.graph(), self.filters());
+            logger.log_progress(format!("selected files={}", selected.len()))?;
+            if let Some(violation) =
+                empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
+            {
+                return Ok(vec![violation]);
+            }
 
-        let file_infos = selected
-            .into_iter()
-            .map(|node| extract_file_info(&project, &node.label))
-            .collect::<Result<Vec<_>, _>>()?;
+            let file_infos = selected
+                .into_iter()
+                .map(|node| extract_file_info(&project, &node.label))
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(gather_custom_file_violations(
-            &file_infos,
-            self.predicate(),
-            self.message(),
-            self.is_negated(),
-        ))
+            Ok(gather_custom_file_violations(
+                &file_infos,
+                self.predicate(),
+                self.message(),
+                self.is_negated(),
+            ))
+        })
     }
 }
 

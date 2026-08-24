@@ -1,3 +1,4 @@
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, MatchPatternFileConditionBuilder,
     PatternError, ProjectLocator, UserError, extract_graph_with_options,
@@ -65,32 +66,36 @@ impl MatchPatternFileCondition {
 
 impl Checkable for MatchPatternFileCondition {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        if let Some(error) = self.condition.selector_error() {
-            return Err(ArchUnitError::from(UserError::with_source(
-                "the file scope contains an invalid selector",
-                error.clone(),
-            )));
-        }
+        execute_logged_check("files.pattern", options, |logger| {
+            if let Some(error) = self.condition.selector_error() {
+                return Err(ArchUnitError::from(UserError::with_source(
+                    "the file scope contains an invalid selector",
+                    error.clone(),
+                )));
+            }
 
-        let check_filter = self.check_filter.as_ref().map_err(|error| {
-            ArchUnitError::from(UserError::with_source(
-                "the file predicate contains an invalid pattern",
-                error.clone(),
+            let check_filter = self.check_filter.as_ref().map_err(|error| {
+                ArchUnitError::from(UserError::with_source(
+                    "the file predicate contains an invalid pattern",
+                    error.clone(),
+                ))
+            })?;
+            logger.log_progress("extracting project graph")?;
+            let project = locate_project_from(self.project_locator())?;
+            let extraction = extract_graph_with_options(&project, options)?;
+            let selected = selected_nodes(extraction.graph(), self.filters());
+            logger.log_progress(format!("selected files={}", selected.len()))?;
+            if let Some(violation) =
+                empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
+            {
+                return Ok(vec![violation]);
+            }
+
+            Ok(gather_matching_file_violations(
+                &selected,
+                check_filter,
+                self.is_negated(),
             ))
-        })?;
-        let project = locate_project_from(self.project_locator())?;
-        let extraction = extract_graph_with_options(&project, options)?;
-        let selected = selected_nodes(extraction.graph(), self.filters());
-        if let Some(violation) =
-            empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
-        {
-            return Ok(vec![violation]);
-        }
-
-        Ok(gather_matching_file_violations(
-            &selected,
-            check_filter,
-            self.is_negated(),
-        ))
+        })
     }
 }
