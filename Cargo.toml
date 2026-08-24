@@ -12,7 +12,19 @@ readme = "README.md"
 keywords = ["architecture", "testing", "dependencies", "static-analysis"]
 categories = ["development-tools::testing"]
 publish = ["crates-io"]
-exclude = ["docs/assets/og.png"]
+exclude = [
+    ".github/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "RELEASING.md",
+    "docs/PORTING_PLAN.md",
+    "docs/_config.yml",
+    "docs/_layouts/**",
+    "docs/adr/**",
+    "docs/assets/**",
+    "tests/**",
+]
 
 [lib]
 path = "src/lib.rs"

@@ -11,6 +11,19 @@ fn manifest_and_archive_metadata_are_ready_for_crates_io() {
     assert!(manifest.contains("rust-version = \"1.85\""));
     assert!(manifest.contains("license = \"MIT\""));
     assert!(manifest.contains("publish = [\"crates-io\"]"));
+    for repository_only in [
+        "\".github/**\"",
+        "\"AGENTS.md\"",
+        "\"RELEASING.md\"",
+        "\"docs/adr/**\"",
+        "\"docs/assets/**\"",
+        "\"tests/**\"",
+    ] {
+        assert!(
+            manifest.contains(repository_only),
+            "publish exclusions are missing {repository_only}"
+        );
+    }
     assert!(manifest.contains("homepage = \"https://lukasniessen.github.io/ArchUnitRust/\""));
     assert!(
         manifest.contains(
