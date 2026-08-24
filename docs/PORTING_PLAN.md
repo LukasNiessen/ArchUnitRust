@@ -60,6 +60,14 @@ against hand-built graphs. Fluent builders are lazy values; only a terminal read
   divergence that preserves exhaustive internal matching while allowing new variants in minor
   releases.
 
+Logging follows the same explicit execution boundary as every other check option. Absence of
+`LoggingOptions` means no work and no output; enabled logging is borrowed from `CheckOptions` and
+never discovered through a global logger or environment variable. Built-in terminals share one
+lifecycle wrapper and add domain-specific progress, violation-kind, and metric-value records. File
+output uses a UTC-timestamped artifact path, creates parent directories, and serializes clones of
+the same configuration with a configuration-owned lock. This keeps parallel Rust tests independent
+while still allowing several deliberate checks to share one CI artifact. See ADR 0021.
+
 ## Source and project model
 
 ### Project location
