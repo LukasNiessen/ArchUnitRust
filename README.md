@@ -150,6 +150,59 @@ with either endpoint outside every declared layer are ignored.
 one file edge produces at most one layer violation even when both policies reject it. Source layers
 used by a policy receive the same strict empty-selection guard as file rules.
 
+## Slice dependencies
+
+Slices derive architectural component names from project-relative Rust file paths. A portable slice
+pattern must contain exactly one `(**)` capture; that capture names the slice:
+
+```rust,no_run
+use archunit::{ArchUnitError, Checkable, project_slices};
+
+fn check_slices() -> Result<(), ArchUnitError> {
+    let rule = project_slices()
+        .defined_by("src/(**)/")
+        .should_not()
+        .contain_dependency("api", "database");
+
+    let violations = rule.check()?;
+    assert!(violations.iter().all(|violation| {
+        violation
+            .as_slice_dependency()
+            .is_none_or(|data| data.source_slice == "api")
+    }));
+    Ok(())
+}
+```
+
+`defined_by_regex(expression)` uses the first capture in a Rust regular expression. Projection
+definitions are reusable directly through `slice_by_pattern`, `slice_by_regex`,
+`slice_by_file_suffix`, and `slice_identity` (also `SliceProjection::identity`). Pass a prepared
+projection to `with_projection`:
+
+```rust,no_run
+use std::error::Error;
+use archunit::{Checkable, project_slices, slice_by_file_suffix};
+
+fn check_suffix_slices() -> Result<(), Box<dyn Error>> {
+    let projection = slice_by_file_suffix([
+        ("_controller", "controllers"),
+        ("_service", "services"),
+    ])?;
+    let rule = project_slices()
+        .with_projection(projection)
+        .should_not()
+        .contain_dependency("controllers", "services");
+    let _violations = rule.check()?;
+    Ok(())
+}
+```
+
+Suffix projections remove the Rust filename extension and choose the longest matching suffix.
+Internal self-edges and dependencies inside one slice are omitted. External Cargo dependencies keep
+their crate name as the target slice, so a rule can explicitly forbid `("api", "tokio")`. A slice
+definition that selects no internal files produces the universal empty-test violation unless
+`CheckOptions::with_allow_empty_tests(true)` is set.
+
 ## Dependency graph snapshots
 
 Graph reports first build one renderer-neutral snapshot. Every query modifier is immutable and lazy;
