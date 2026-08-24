@@ -23,3 +23,9 @@ struct LayersPage;
 
 #[doc = include_str!("../docs/slices.md")]
 struct SlicesPage;
+
+#[doc = include_str!("../docs/metrics.md")]
+struct MetricsPage;
+
+#[doc = include_str!("../docs/graph.md")]
+struct GraphPage;
