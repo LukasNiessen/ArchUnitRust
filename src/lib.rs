@@ -6,6 +6,7 @@ mod common;
 mod files;
 mod graph;
 mod layers;
+mod slices;
 mod testing;
 mod violation;
 
@@ -64,6 +65,10 @@ pub use layers::assertion::{
 pub use layers::fluentapi::{
     LayerDefinitionBuilder, LayerDependencyRuleBuilder, LayeredArchitecture, layers, layers_in,
     project_layers, project_layers_in,
+};
+pub use slices::projection::{
+    SliceProjection, SliceProjectionError, slice_by_file_suffix, slice_by_pattern, slice_by_regex,
+    slice_identity,
 };
 pub use testing::{
     ColorChoice, ColorUtils, ResultFactory, TestResult, TestResultOptions, TestViolation,
