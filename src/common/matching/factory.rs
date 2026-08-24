@@ -293,4 +293,19 @@ mod tests {
 
         assert_eq!(error.pattern(), "src/[generated");
     }
+
+    #[test]
+    fn exact_file_selectors_keep_a_literal_parent_and_glob_exclusions() {
+        let filter = RegexFactory::default()
+            .exact_file_matcher(pattern("src/model[1].rs").except("src/model*.rs"))
+            .expect("literal parent and glob exclusion should compile");
+
+        assert_eq!(filter.pattern().syntax(), PatternSyntax::Literal);
+        assert_eq!(
+            filter.exclusions()[0].pattern().syntax(),
+            PatternSyntax::Glob
+        );
+        assert!(!filter.matches("src/model[1].rs"));
+        assert!(!filter.matches("src/model1.rs"));
+    }
 }
