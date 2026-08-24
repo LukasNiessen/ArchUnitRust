@@ -14,3 +14,12 @@ struct GrammarPage;
 
 #[doc = include_str!("../docs/patterns.md")]
 struct PatternsPage;
+
+#[doc = include_str!("../docs/files.md")]
+struct FilesPage;
+
+#[doc = include_str!("../docs/layers.md")]
+struct LayersPage;
+
+#[doc = include_str!("../docs/slices.md")]
+struct SlicesPage;
