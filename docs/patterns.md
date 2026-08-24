@@ -100,4 +100,3 @@ terminal executes. A valid pattern that selects nothing is different: it produce
 selection violation described in [running a rule](running.md#when-a-rule-selects-nothing).
 
 Next, use these selectors in [the files family](files.md).
-

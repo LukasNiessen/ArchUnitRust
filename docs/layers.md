@@ -98,4 +98,3 @@ assert!(rule.forbidden_dependencies().is_empty());
 
 Next, derive component names rather than declaring them individually in
 [the slices family](slices.md).
-

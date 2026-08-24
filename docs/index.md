@@ -76,4 +76,3 @@ Three details matter before the second rule:
 The generated [Rust API reference]({{ site.api_reference_path | relative_url }}) sits beside this
 guide. The source code and its public doc comments remain the authority when a guide explanation
 and a symbol signature differ.
-

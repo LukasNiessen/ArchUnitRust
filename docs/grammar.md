@@ -123,4 +123,3 @@ assert_eq!(repositories.filters().len(), 2);
 
 Continue with [patterns and identifiers](patterns.md), then choose a family from the
 [landing page](index.md#where-to-go-next).
-

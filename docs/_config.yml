@@ -36,4 +36,3 @@ relative_links:
 exclude:
   - PORTING_PLAN.md
   - adr
-

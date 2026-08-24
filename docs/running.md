@@ -156,4 +156,3 @@ assert_passes!(rule, options);
 
 Continue with [how it works](internals.md) for the extraction pipeline and the boundaries the crate
 enforces on itself.
-

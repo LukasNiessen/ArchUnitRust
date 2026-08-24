@@ -105,4 +105,3 @@ manager, or second hand-written API reference to drift.
 
 Read the generated [Rust API reference]({{ site.api_reference_path | relative_url }}) for signatures
 and type-level contracts, or return to [the landing page](index.md).
-

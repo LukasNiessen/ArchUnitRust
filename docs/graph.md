@@ -109,4 +109,3 @@ portable source views without scripts or remote assets.
 
 Continue with [running a rule](running.md) for extraction options, caching, logging, and structured
 failure handling.
-

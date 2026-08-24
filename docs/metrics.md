@@ -175,4 +175,3 @@ the UTC timestamp for byte-stable artifacts; custom CSS replaces the default sty
 
 Next, visualize dependencies without making a verdict in
 [dependency-graph reports](graph.md).
-

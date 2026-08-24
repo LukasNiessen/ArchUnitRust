@@ -140,4 +140,3 @@ The stored callback must be `Send + Sync + 'static`. Panics from user callbacks 
 returning `false` produces a `CustomFileViolation` with the supplied message and file facts.
 
 Next, give several file scopes names in [the layers family](layers.md).
-
