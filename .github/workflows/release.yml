@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version from Cargo.toml, without a leading v
+        required: true
+        type: string
+
+concurrency:
+  group: crates-io-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish archunit ${{ inputs.version }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install stable Rust with quality components
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
+
+      - name: Verify the requested version and release inputs
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          actual_version=$(cargo +stable metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "archunit") | .version')
+          if [ "$actual_version" != "$RELEASE_VERSION" ]; then
+            echo "Requested $RELEASE_VERSION, but Cargo.toml contains $actual_version" >&2
+            exit 1
+          fi
+          if git rev-parse --quiet --verify "refs/tags/v$RELEASE_VERSION" >/dev/null; then
+            echo "Tag v$RELEASE_VERSION already exists" >&2
+            exit 1
+          fi
+          grep --fixed-strings "archunit = \"=$RELEASE_VERSION\"" tests/fixtures/registry_consumer/Cargo.toml.template
+
+      - name: Re-run every release quality gate
+        run: |
+          cargo +stable fmt --all -- --check
+          cargo +stable clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo +stable test --workspace --all-features --locked
+          RUSTDOCFLAGS="-D warnings" cargo +stable doc --workspace --all-features --no-deps --locked
+          cargo +stable publish --dry-run --locked
+
+      - name: Acquire a short-lived crates.io token
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish the immutable crate archive
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo +stable publish --locked
+
+  verify:
+    name: Verify registry installation and create the GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the published commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install stable Rust
+        run: rustup toolchain install stable --profile minimal --no-self-update
+
+      - name: Install the exact registry version in a standalone project
+        run: |
+          consumer="$RUNNER_TEMP/archunit-registry-consumer"
+          mkdir -p "$consumer"
+          cp tests/fixtures/registry_consumer/Cargo.toml.template "$consumer/Cargo.toml"
+          cp -R tests/fixtures/registry_consumer/src "$consumer/src"
+          cp -R tests/fixtures/registry_consumer/tests "$consumer/tests"
+          for attempt in $(seq 1 18); do
+            if CARGO_TARGET_DIR="$RUNNER_TEMP/registry-consumer-target" cargo +stable test --manifest-path "$consumer/Cargo.toml"; then
+              exit 0
+            fi
+            echo "Registry version is not visible yet (attempt $attempt of 18)" >&2
+            sleep 10
+          done
+          exit 1
+
+      - name: Tag the verified commit and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: gh release create "v$RELEASE_VERSION" --target "$GITHUB_SHA" --title "archunit v$RELEASE_VERSION" --generate-notes

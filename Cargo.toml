@@ -5,12 +5,26 @@ edition = "2024"
 rust-version = "1.85"
 description = "Architecture testing for Rust"
 repository = "https://github.com/LukasNiessen/ArchUnitRust"
+homepage = "https://lukasniessen.github.io/ArchUnitRust/"
 documentation = "https://lukasniessen.github.io/ArchUnitRust/api/archunit/"
 license = "MIT"
 readme = "README.md"
 keywords = ["architecture", "testing", "dependencies", "static-analysis"]
 categories = ["development-tools::testing"]
-exclude = ["docs/assets/og.png"]
+publish = ["crates-io"]
+exclude = [
+    ".github/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "RELEASING.md",
+    "docs/PORTING_PLAN.md",
+    "docs/_config.yml",
+    "docs/_layouts/**",
+    "docs/adr/**",
+    "docs/assets/**",
+    "tests/**",
+]
 
 [lib]
 path = "src/lib.rs"
