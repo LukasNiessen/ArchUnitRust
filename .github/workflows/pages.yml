@@ -45,17 +45,17 @@ jobs:
       - if: steps.site.outputs.enabled == 'true'
         uses: actions/configure-pages@v6
 
+      - name: Build the API reference into the site source
+        run: |
+          cargo +1.85.0 doc --all-features --no-deps
+          mkdir -p docs/api
+          cp -R target/doc/. docs/api/
+
       - name: Build the guide
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs
           destination: ./_site
-
-      - name: Build and attach the API reference
-        run: |
-          cargo +1.85.0 doc --all-features --no-deps
-          mkdir -p _site/api
-          cp -R target/doc/. _site/api/
 
       - uses: actions/upload-pages-artifact@v5
         with:
