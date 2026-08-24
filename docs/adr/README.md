@@ -23,3 +23,4 @@ rewriting history after released behavior depends on it.
 - [0017: Own generic custom metric callbacks](0017-own-generic-custom-metric-callbacks.md)
 - [0018: Use exact measurement-backed thresholds](0018-use-exact-measurement-backed-thresholds.md)
 - [0019: Export deterministic offline metrics reports](0019-export-deterministic-offline-metrics-reports.md)
+- [0020: Model exclusions as immutable pattern specifications](0020-model-exclusions-as-immutable-pattern-specifications.md)

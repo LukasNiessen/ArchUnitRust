@@ -171,6 +171,12 @@ Patterns remain the shared substrate: glob strings compile once to regex, separa
 selectors combine with AND, alternatives inside one selector combine with OR, and `except` is
 available from the beginning rather than retrofitted at issue #38.
 
+Rust expresses the optional per-selector companion as `pattern("...").except("...")`; ordinary
+string arguments remain valid. `PatternSpec` owns ordered exclusions and targeted variants for path,
+folder, filename, and Rust type name. The factory binds plain exclusions to the parent target and
+`Filter` evaluates them after the parent match. Capture-based slice projections filter paths before
+labeling so excluded files cannot reappear as isolated slices or dependency endpoints. See ADR 0020.
+
 ## Metrics mean Rust concepts
 
 Rust does not have classes. The shared metrics goals are preserved with a truthful Rust model:

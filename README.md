@@ -113,6 +113,39 @@ workspace-relative path, filename without extension, extension and containing di
 predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
 thread-safe values.
 
+## Pattern exclusions
+
+Every pattern selector still accepts a plain string. Wrap the same string with `pattern` when that
+one selector needs exclusions:
+
+```rust,no_run
+use archunit::{assert_passes, pattern, project_files};
+
+let rule = project_files()
+    .in_path(
+        pattern("src/**")
+            .except_in_folder("src/generated/**")
+            .except_with_name("*_generated.rs"),
+    )
+    .should_not()
+    .depend_on_files()
+    .in_path(pattern("src/database/**").except("src/database/public.rs"));
+
+assert_passes!(rule);
+```
+
+`except` and `except_all` inherit the parent selector target. Target-explicit alternatives are
+`except_in_path`, `except_in_folder`, `except_with_name`, and
+`except_for_types_matching`. Exclusions on one selector use OR semantics—matching any one removes
+the candidate from that parent match—while chained parent selectors retain their normal AND
+semantics. The same contract covers file scopes and predicates, dependency objects, layer
+definitions, graph queries, metric file/type scopes, and slice capture projections.
+
+Exclusions use the same glob/regex syntax, exact matching, separator normalization, and case policy
+as their parent factory. `defined_by` slice exclusions are globs; `defined_by_regex` exclusions are
+Rust regular expressions. An invalid parent or exclusion remains a user configuration error and is
+reported before Cargo project discovery.
+
 ## Rust-native metrics
 
 Metrics expose immutable measurements rather than architecture verdicts. Count and LCOM families
