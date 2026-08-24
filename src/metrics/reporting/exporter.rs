@@ -6,7 +6,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::{ArchUnitError, MetricMeasurement, MetricSubject, TechnicalError, UserError};
+use crate::{
+    common::{ArchUnitError, TechnicalError, UserError},
+    metrics::{MetricMeasurement, MetricSubject},
+};
 
 use super::MetricsExportOptions;
 
@@ -273,7 +276,7 @@ mod tests {
     use std::{fs, process, time::SystemTime};
 
     use super::{MetricsExporter, MetricsReportData, format_utc_timestamp};
-    use crate::{ArchUnitError, MetricsExportOptions};
+    use crate::{common::ArchUnitError, metrics::MetricsExportOptions};
 
     fn options() -> MetricsExportOptions {
         MetricsExportOptions::new()

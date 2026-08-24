@@ -2,8 +2,10 @@ use std::path::Path;
 
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchitecturalZone, CheckOptions, CheckResult, Checkable, ProjectLocator, Violation,
-    gather_empty_test_violations, gather_metric_zone_violations,
+    checkable::{CheckResult, Checkable},
+    common::{CheckOptions, ProjectLocator, gather_empty_test_violations},
+    metrics::{ArchitecturalZone, gather_metric_zone_violations},
+    violation::Violation,
 };
 
 use super::{MetricsBuilder, logging::log_measurements};
@@ -60,8 +62,8 @@ impl Checkable for MetricZoneCondition {
             }
 
             let measurements = [
-                crate::DistanceMetric::Abstractness,
-                crate::DistanceMetric::Instability,
+                crate::metrics::DistanceMetric::Abstractness,
+                crate::metrics::DistanceMetric::Instability,
             ]
             .into_iter()
             .flat_map(|metric| metric.measurements(&infos))

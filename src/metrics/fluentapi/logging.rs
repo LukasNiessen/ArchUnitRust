@@ -1,4 +1,7 @@
-use crate::{ArchUnitError, CheckLogger, MetricMeasurement};
+use crate::{
+    common::{ArchUnitError, CheckLogger},
+    metrics::MetricMeasurement,
+};
 
 pub(super) fn log_measurements(
     logger: &CheckLogger<'_>,

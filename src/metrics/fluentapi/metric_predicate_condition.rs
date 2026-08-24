@@ -1,7 +1,9 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    CheckOptions, CheckResult, Checkable, Filter, MetricMeasurement, MetricSubject, Violation,
-    gather_empty_test_violations, gather_metric_predicate_violations,
+    checkable::{CheckResult, Checkable},
+    common::{CheckOptions, Filter, gather_empty_test_violations},
+    metrics::{MetricMeasurement, MetricSubject, gather_metric_predicate_violations},
+    violation::Violation,
 };
 
 use super::{

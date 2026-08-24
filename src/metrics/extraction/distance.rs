@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{
+use crate::common::{
     ArchUnitError, CargoProject, CheckOptions, Graph, SourceOptions, extract_graph_with_options,
 };
 
@@ -122,7 +122,10 @@ pub fn extract_distance_infos(
 mod tests {
     use std::path::PathBuf;
 
-    use crate::{Edge, Graph, ImportKind, extract_file_metrics};
+    use crate::{
+        common::{Edge, Graph, ImportKind},
+        metrics::extract_file_metrics,
+    };
 
     use super::{ProjectMetricsInfo, build_distance_infos};
 

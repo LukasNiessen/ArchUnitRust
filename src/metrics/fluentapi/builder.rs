@@ -1,10 +1,15 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    ArchUnitError, CheckOptions, CountMetric, DistanceInfo, DistanceMetric, Filter, LcomMetric,
-    MetricMeasurement, MetricSubject, MetricsExportOptions, MetricsExporter, PatternError,
-    PatternTarget, ProjectLocator, ProjectMetricsInfo, RegexFactory, SourceOptions, TypeInfo,
-    UserError, extract_distance_infos, extract_project_metrics, locate_project_from,
+    common::{
+        ArchUnitError, CheckOptions, Filter, PatternError, PatternTarget, ProjectLocator,
+        RegexFactory, SourceOptions, UserError, locate_project_from,
+    },
+    metrics::{
+        CountMetric, DistanceInfo, DistanceMetric, LcomMetric, MetricMeasurement, MetricSubject,
+        MetricsExportOptions, MetricsExporter, ProjectMetricsInfo, TypeInfo,
+        extract_distance_infos, extract_project_metrics,
+    },
 };
 
 use super::{
@@ -15,27 +20,35 @@ macro_rules! metric_threshold_methods {
     () => {
         /// Requires every measured value to be strictly below `threshold`.
         pub fn should_be_below(self, threshold: f64) -> MetricThresholdCondition<Self> {
-            MetricThresholdCondition::new(self, crate::MetricComparison::Below, threshold)
+            MetricThresholdCondition::new(self, crate::metrics::MetricComparison::Below, threshold)
         }
 
         /// Requires every measured value to be strictly above `threshold`.
         pub fn should_be_above(self, threshold: f64) -> MetricThresholdCondition<Self> {
-            MetricThresholdCondition::new(self, crate::MetricComparison::Above, threshold)
+            MetricThresholdCondition::new(self, crate::metrics::MetricComparison::Above, threshold)
         }
 
         /// Requires every measured value to equal `threshold` exactly.
         pub fn should_be(self, threshold: f64) -> MetricThresholdCondition<Self> {
-            MetricThresholdCondition::new(self, crate::MetricComparison::Equal, threshold)
+            MetricThresholdCondition::new(self, crate::metrics::MetricComparison::Equal, threshold)
         }
 
         /// Requires every measured value to be below or equal to `threshold`.
         pub fn should_be_below_or_equal(self, threshold: f64) -> MetricThresholdCondition<Self> {
-            MetricThresholdCondition::new(self, crate::MetricComparison::BelowOrEqual, threshold)
+            MetricThresholdCondition::new(
+                self,
+                crate::metrics::MetricComparison::BelowOrEqual,
+                threshold,
+            )
         }
 
         /// Requires every measured value to be above or equal to `threshold`.
         pub fn should_be_above_or_equal(self, threshold: f64) -> MetricThresholdCondition<Self> {
-            MetricThresholdCondition::new(self, crate::MetricComparison::AboveOrEqual, threshold)
+            MetricThresholdCondition::new(
+                self,
+                crate::metrics::MetricComparison::AboveOrEqual,
+                threshold,
+            )
         }
     };
 }
@@ -69,7 +82,7 @@ impl MetricsBuilder {
     }
 
     /// Keeps source files whose final path segment matches `pattern`.
-    pub fn with_name(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn with_name(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         match RegexFactory::default().filename_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("with_name", source),
@@ -78,7 +91,7 @@ impl MetricsBuilder {
     }
 
     /// Keeps source files whose containing folder matches `pattern`.
-    pub fn in_folder(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_folder(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         match RegexFactory::default().folder_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("in_folder", source),
@@ -87,7 +100,7 @@ impl MetricsBuilder {
     }
 
     /// Keeps source files whose normalized project path matches `pattern`.
-    pub fn in_path(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_path(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("in_path", source),
@@ -100,7 +113,7 @@ impl MetricsBuilder {
     /// When present, files without a matching type are omitted. File-level type and trait counts
     /// describe only the retained declarations; source-wide counts such as lines and imports remain
     /// properties of the containing file.
-    pub fn for_types_matching(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn for_types_matching(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         match RegexFactory::default().type_name_matcher(pattern) {
             Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("for_types_matching", source),
@@ -414,12 +427,12 @@ impl DistanceMetricsBuilder {
 
     /// Rejects components with low abstractness and low instability.
     pub fn not_in_zone_of_pain(self) -> MetricZoneCondition {
-        MetricZoneCondition::new(self.query, crate::ArchitecturalZone::Pain)
+        MetricZoneCondition::new(self.query, crate::metrics::ArchitecturalZone::Pain)
     }
 
     /// Rejects components with high abstractness and high instability.
     pub fn not_in_zone_of_uselessness(self) -> MetricZoneCondition {
-        MetricZoneCondition::new(self.query, crate::ArchitecturalZone::Uselessness)
+        MetricZoneCondition::new(self.query, crate::metrics::ArchitecturalZone::Uselessness)
     }
 
     fn select(self, metric: DistanceMetric) -> DistanceMetricSelection {
@@ -800,7 +813,8 @@ mod tests {
 
     use super::{metrics, metrics_in};
     use crate::{
-        ArchUnitError, ArchitecturalZone, CountMetric, DistanceMetric, LcomMetric, ProjectLocator,
+        common::{ArchUnitError, ProjectLocator},
+        metrics::{ArchitecturalZone, CountMetric, DistanceMetric, LcomMetric},
     };
 
     #[test]
