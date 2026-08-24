@@ -8,6 +8,8 @@ pub(crate) enum SliceConfigurationError {
     },
     EmptySourceSlice,
     EmptyTargetSlice,
+    EmptyDiagramText,
+    EmptyDiagramPath,
 }
 
 impl SliceConfigurationError {
@@ -19,6 +21,8 @@ impl SliceConfigurationError {
             ),
             Self::EmptySourceSlice => UserError::new("source slice name must not be empty"),
             Self::EmptyTargetSlice => UserError::new("target slice name must not be empty"),
+            Self::EmptyDiagramText => UserError::new("PlantUML diagram text must not be empty"),
+            Self::EmptyDiagramPath => UserError::new("PlantUML diagram path must not be empty"),
         };
         error.into()
     }

@@ -71,7 +71,8 @@ pub use slices::assertion::{
     gather_diagram_adherence_violations, gather_forbidden_slice_dependency_violations,
 };
 pub use slices::fluentapi::{
-    ForbiddenSliceDependencyCondition, NegativeSliceConditionBuilder, SliceScopeBuilder,
+    DiagramSliceCondition, DiagramSource, ForbiddenSliceDependencyCondition,
+    NegativeSliceConditionBuilder, PositiveSliceConditionBuilder, SliceScopeBuilder,
     project_slices, project_slices_in, slices, slices_in,
 };
 pub use slices::projection::{
