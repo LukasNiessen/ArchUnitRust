@@ -9,7 +9,7 @@ pub trait Port {
 
 pub struct Service {
     repository: Repository,
-    requests: usize,
+    pub(crate) requests: usize,
 }
 
 pub struct Repository;
@@ -44,6 +44,10 @@ impl Service {
 impl Port for Service {
     fn send(&self) -> usize {
         self.requests
+    }
+
+    fn make() -> Self {
+        Self::new(Repository)
     }
 }
 

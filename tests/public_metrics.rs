@@ -14,7 +14,7 @@ fn project_analysis_associates_impls_and_preserves_field_access_evidence() {
         .analyze()
         .expect("the metrics fixture should be analyzable");
 
-    assert_eq!(project.files().len(), 2);
+    assert_eq!(project.files().len(), 3);
     assert_eq!(project.types().len(), 5);
     let service = project
         .types()
@@ -22,14 +22,14 @@ fn project_analysis_associates_impls_and_preserves_field_access_evidence() {
         .find(|type_info| type_info.name() == "Service")
         .expect("Service should be extracted");
     assert_eq!(service.kind(), TypeKind::Struct);
-    assert_eq!(service.methods().len(), 3);
-    assert_eq!(service.associated_functions(), &["new"]);
+    assert_eq!(service.methods().len(), 4);
+    assert_eq!(service.associated_functions(), &["make", "new"]);
     assert_eq!(service.fields()[0].name(), "repository");
     assert_eq!(service.fields()[0].accessed_by(), &["execute"]);
     assert_eq!(service.fields()[1].name(), "requests");
     assert_eq!(
         service.fields()[1].accessed_by(),
-        &["execute", "increment", "send"]
+        &["execute", "increment", "reset", "send"]
     );
 
     let state = project
@@ -63,7 +63,7 @@ fn type_selectors_and_type_count_metrics_use_rust_vocabulary() {
     assert_eq!(methods.len(), 1);
     assert_eq!(methods[0].identifier(), "Service");
     assert_eq!(methods[0].metric_name(), "method_count");
-    assert_eq!(methods[0].value(), 3.0);
+    assert_eq!(methods[0].value(), 4.0);
     assert!(matches!(methods[0].subject(), MetricSubject::Type(_)));
     assert_eq!(fields.len(), 1);
     assert_eq!(fields[0].value(), 2.0);
@@ -98,7 +98,7 @@ fn every_file_count_has_explicit_rust_semantics() {
     assert_eq!(measure("traits"), 1.0);
     assert_eq!(measure("impls"), 4.0);
     assert_eq!(measure("macros"), 3.0);
-    assert_eq!(measure("associated"), 2.0);
+    assert_eq!(measure("associated"), 3.0);
 }
 
 #[test]

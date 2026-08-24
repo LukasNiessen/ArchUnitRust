@@ -736,4 +736,25 @@ let value = 1; /* trailing comment */
         assert_eq!(error.identifier(), "src/broken.rs");
         assert!(error.to_string().contains("src/broken.rs"));
     }
+
+    #[test]
+    fn leaves_ambiguous_impl_targets_unattached_but_observable() {
+        let source = r#"
+mod first { pub struct Shared; }
+mod second { pub struct Shared; }
+impl Shared { fn ambiguous(&self) {} }
+"#;
+        let metrics = extract_file_metrics("src/lib.rs", source).expect("fixture should parse");
+
+        assert_eq!(metrics.types().len(), 2);
+        assert!(
+            metrics
+                .types()
+                .iter()
+                .all(|type_info| type_info.methods().is_empty())
+        );
+        assert_eq!(metrics.impls().len(), 1);
+        assert_eq!(metrics.impls()[0].target_type(), "Shared");
+        assert_eq!(metrics.impls()[0].methods()[0].name(), "ambiguous");
+    }
 }

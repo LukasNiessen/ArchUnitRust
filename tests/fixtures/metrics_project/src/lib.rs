@@ -1,4 +1,5 @@
 pub mod domain;
+mod extensions;
 
 use domain::{Repository, Service};
 
