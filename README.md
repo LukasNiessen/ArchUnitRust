@@ -1,35 +1,80 @@
 # ArchUnitRust
 
-Architecture testing for Rust. Part of **ArchUnitEverything** — one architecture-testing library per language.
+Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUnitRust is part of
+**ArchUnitEverything** — one architecture-testing library per language.
 
-> Early development. Nothing to install yet.
+> **Status:** usable from Git and under active development. The crate is not published on
+> crates.io yet; the current package version is `0.0.1` and requires Rust 1.85 or newer.
 
-A fluent file rule is an ordinary Rust test value. The zero-configuration assertion macro is the
-universal path through the built-in harness and any Rust test framework that recognizes assertion
-panics:
+## Install
+
+ArchUnit rules belong in the project that they check, so add the crate as a development dependency:
+
+```console
+cargo add --dev --git https://github.com/LukasNiessen/ArchUnitRust archunit
+```
+
+The equivalent `Cargo.toml` entry is:
+
+```toml
+[dev-dependencies]
+archunit = { git = "https://github.com/LukasNiessen/ArchUnitRust" }
+```
+
+Cargo records the resolved Git commit in `Cargo.lock`. Commit that lockfile when the consuming
+project normally tracks it. After the first crates.io release, the Git dependency can be replaced
+by a versioned registry dependency.
+
+## File rules
+
+### First rule: a file boundary
+
+Create `tests/architecture.rs`, adapt the two project-relative paths, and add this ten-line test:
 
 ```rust,no_run
 use archunit::{assert_passes, project_files};
-
 #[test]
-fn architecture_is_acyclic() {
+fn api_does_not_reach_database() {
     let rule = project_files()
-        .in_folder("src/**")
-        .should()
-        .have_no_cycles();
-
+        .in_path("src/api/**")
+        .should_not()
+        .depend_on_files()
+        .in_path("src/database/**");
     assert_passes!(rule);
 }
 ```
 
-Rules are lazy: building this sentence reads no files. `assert_passes!` calls `check()`, locates the
-Cargo project, extracts its dependency graph and emits the shared numbered failure message when
-violations are found. The macro borrows the rule, so named terminals remain reusable.
+Run it with `cargo test --test architecture`. `project_files()` discovers the containing Cargo
+package or workspace, analyzes production targets, and returns a lazy rule value. `assert_passes!`
+executes the rule and reports every violation with its dependency evidence. No test-framework
+adapter or global initialization is required.
 
-A scope that selects no files returns one typed `EmptyTestViolation` by default; it never silently
-passes because a path was misspelled or became stale. This guard applies to every terminal and
-checks selected files rather than dependency edges, so an existing isolated file is not considered
-empty. Intentional empty scopes require an explicit per-check opt-out:
+### Fluent API grammar
+
+Check rules read from left to right:
+
+```text
+entry point -> subject selectors -> mood -> condition -> optional condition selectors -> execute
+```
+
+For file rules, each stage has a small, fixed vocabulary:
+
+| Stage | API |
+| --- | --- |
+| Entry point | `project_files()` or `project_files_in(path)` |
+| Subject selectors | `with_name`, `in_folder`, `in_path`, `in_file` |
+| Mood | `should()` or `should_not()` |
+| Conditions | `have_no_cycles`, `have_name`, `be_in_folder`, `be_in_path`, `depend_on_files`, `depend_on_external_modules`, `adhere_to` |
+| Execute | `assert_passes!(rule)`, `rule.check()`, or `rule.check_with(&options)` |
+
+Chained subject selectors use AND semantics. Target selectors after `depend_on_files()` use OR
+semantics. A positive dependency condition is an allowlist for every outgoing dependency; a
+negated dependency condition is a denylist. Plain strings are case-sensitive, complete-candidate
+globs: `*` stays within one path segment, while `**` crosses separators. Builders consume and
+return values, so clone a partial builder when several rules share a scope.
+
+Every check is strict about stale selectors. A scope that selects no files returns an
+`EmptyTestViolation` instead of silently passing. Make an intentionally optional scope explicit:
 
 ```rust,no_run
 use archunit::{CheckOptions, assert_passes, project_files};
@@ -43,75 +88,65 @@ let options = CheckOptions::new().with_allow_empty_tests(true);
 assert_passes!(optional_rule, options);
 ```
 
-The same scope and mood grammar applies to file naming and placement. All three predicates support
-both `should()` and `should_not()`:
+### More file conditions
+
+Naming, placement, internal dependencies, external Cargo crates, and custom predicates all use the
+same grammar:
 
 ```rust
-use archunit::{Checkable, project_files};
+use archunit::{Checkable, FileInfo, project_files};
 
-let naming = project_files()
+let services = project_files()
     .in_folder("src/services")
     .should()
     .have_name("*_service.rs");
-let placement = project_files()
-    .with_name("*_test.rs")
-    .should_not()
-    .be_in_path("src/**");
-
-let _: [&dyn Checkable; 2] = [&naming, &placement];
-```
-
-Relational rules use the same sentence grammar. Positive dependency rules are allowlists for every
-outgoing dependency from the selected files; negated rules are denylists:
-
-```rust
-use archunit::{Checkable, project_files};
-
-let boundary = project_files()
-    .in_folder("src/api")
-    .should_not()
-    .depend_on_files()
-    .in_folder("src/database");
-
-let _: &dyn Checkable = &boundary;
-```
-
-External dependency rules match Cargo-visible crate names. Repeated `matching` selectors are OR
-alternatives, making allowlists and denylists straightforward:
-
-```rust
-use archunit::{Checkable, project_files};
-
 let approved_crates = project_files()
     .should()
     .depend_on_external_modules()
     .matching("std")
     .matching("serde");
+let manageable_files = project_files().in_path("src/**").should().adhere_to(
+    |file: &FileInfo| file.non_blank_line_count <= 200,
+    "contain at most 200 non-blank lines",
+);
 
-let _: &dyn Checkable = &approved_crates;
+let _: [&dyn Checkable; 3] = [&services, &approved_crates, &manageable_files];
 ```
 
-Custom predicates cover project-specific facts without expanding the built-in vocabulary. They
-receive immutable, normalized `FileInfo` data and run once for each selected file:
+`FileInfo` exposes the normalized workspace-relative path, filename without extension, extension,
+containing directory, source text, and non-blank line count. Stored predicates are
+`Send + Sync + 'static`; captured configuration therefore needs owned, thread-safe values.
 
-```rust
-use archunit::{Checkable, FileInfo, project_files};
+## Feature guide
 
-let manageable_modules = project_files()
-    .in_folder("src/**")
-    .should()
-    .adhere_to(
-        |file: &FileInfo| file.non_blank_line_count <= 200,
-        "contain at most 200 non-blank lines",
-    );
+The public API is re-exported from the `archunit` crate root. Its implemented feature areas each
+have a source-checked example below:
 
-let _: &dyn Checkable = &manageable_modules;
-```
+| Feature area | Start with | Example |
+| --- | --- | --- |
+| File rules | `project_files()` | [File rules](#file-rules) |
+| Named layers | `project_layers()` | [Named layer policies](#named-layer-policies) |
+| Captured slices and PlantUML | `project_slices()` | [Slice dependencies](#slice-dependencies) |
+| Rust-native metrics | `metrics()` | [Rust-native metrics](#rust-native-metrics) |
+| Dependency graph reports | `project_graph()` | [Dependency graph snapshots](#dependency-graph-snapshots) |
+| Test integration and structured results | `assert_passes!` / `Checkable` | [Testing and framework-neutral results](#testing-and-framework-neutral-results) |
 
-Alongside the line count and full source text, `FileInfo` exposes the normalized
-workspace-relative path, filename without extension, extension and containing directory. Stored
-predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
-thread-safe values.
+All Rust snippets in this README are included in the crate documentation and compiled as doctests.
+The sections after this guide are the detailed reference for the implemented surface.
+
+## What is not implemented yet
+
+- crates.io publication is tracked by [#44](https://github.com/LukasNiessen/ArchUnitRust/issues/44),
+  so installation currently uses the Git repository;
+- hosted API/user documentation is tracked by
+  [#42](https://github.com/LukasNiessen/ArchUnitRust/issues/42), and repository CI by
+  [#43](https://github.com/LukasNiessen/ArchUnitRust/issues/43);
+- extraction is syntax-based: it does not expand macros or inspect build-script-generated source,
+  evaluates `cfg` branches as a conservative union, and exposes files rather than Rust items as
+  dependency nodes.
+
+These are explicit boundaries, not implied compatibility claims. See the
+[porting plan](docs/PORTING_PLAN.md#v01-boundary) for the complete v0.1 scope.
 
 ## Pattern exclusions
 
