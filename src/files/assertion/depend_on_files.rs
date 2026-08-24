@@ -90,7 +90,7 @@ mod tests {
         );
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_file_dependency)
+            .filter_map(crate::violation::Violation::as_file_dependency)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 1);
@@ -110,7 +110,7 @@ mod tests {
         );
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_file_dependency)
+            .filter_map(crate::violation::Violation::as_file_dependency)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 1);

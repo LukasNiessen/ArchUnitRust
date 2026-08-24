@@ -54,7 +54,7 @@ impl Default for TestResultOptions {
 #[cfg(test)]
 mod tests {
     use super::TestResultOptions;
-    use crate::ColorChoice;
+    use crate::testing::ColorChoice;
 
     #[test]
     fn defaults_to_auto_color_and_a_passing_expectation() {

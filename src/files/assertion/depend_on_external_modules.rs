@@ -89,7 +89,7 @@ mod tests {
         );
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_external_module_dependency)
+            .filter_map(crate::violation::Violation::as_external_module_dependency)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 1);
@@ -112,7 +112,7 @@ mod tests {
         );
         let targets = violations
             .iter()
-            .filter_map(crate::Violation::as_external_module_dependency)
+            .filter_map(crate::violation::Violation::as_external_module_dependency)
             .map(|violation| violation.dependency.target_label.as_str())
             .collect::<Vec<_>>();
 

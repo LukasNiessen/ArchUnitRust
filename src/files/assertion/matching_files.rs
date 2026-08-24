@@ -51,7 +51,7 @@ mod tests {
         let violations = gather_matching_file_violations(&nodes(), &filter, false);
         let labels = violations
             .iter()
-            .filter_map(crate::Violation::as_file_pattern)
+            .filter_map(crate::violation::Violation::as_file_pattern)
             .map(|violation| violation.projected_node.label.as_str())
             .collect::<Vec<_>>();
 
@@ -78,7 +78,7 @@ mod tests {
         let violations = gather_matching_file_violations(&nodes(), &filter, true);
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_file_pattern)
+            .filter_map(crate::violation::Violation::as_file_pattern)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 2);

@@ -1,4 +1,8 @@
-use crate::{CheckOptions, Checkable, ResultFactory, TestResult, TestResultOptions};
+use crate::{
+    checkable::Checkable,
+    common::CheckOptions,
+    testing::{ResultFactory, TestResult, TestResultOptions},
+};
 
 pub fn evaluate_assertion<R>(rule: &R, check_options: &CheckOptions) -> TestResult
 where
@@ -24,8 +28,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        ArchUnitError, CheckOptions, CheckResult, Checkable, ColorChoice, EmptyTestViolation,
-        TechnicalError, TestResultOptions, Violation,
+        checkable::{CheckResult, Checkable},
+        common::{ArchUnitError, CheckOptions, EmptyTestViolation, TechnicalError},
+        testing::{ColorChoice, TestResultOptions},
+        violation::Violation,
     };
 
     use super::evaluate_assertion_with_options;
