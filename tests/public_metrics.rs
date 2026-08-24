@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use archunit::{CheckOptions, MetricSubject, TypeKind, metrics_in};
+use archunit::{CheckOptions, LcomInput, MetricSubject, TypeKind, metrics_in};
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -39,6 +39,14 @@ fn project_analysis_associates_impls_and_preserves_field_access_evidence() {
         .expect("Service should be extracted");
     assert_eq!(service.kind(), TypeKind::Struct);
     assert_eq!(service.methods().len(), 4);
+    assert_eq!(
+        service
+            .inherent_methods()
+            .iter()
+            .map(|method| method.name())
+            .collect::<Vec<_>>(),
+        ["execute", "increment", "reset"]
+    );
     assert_eq!(service.associated_functions(), &["make", "new"]);
     assert_eq!(service.fields()[0].name(), "repository");
     assert_eq!(service.fields()[0].accessed_by(), &["execute"]);
@@ -158,6 +166,112 @@ fn dev_target_sources_are_opt_in_and_empty_measurements_are_data() {
         .expect("dev-source analysis should succeed");
 
     assert!(default.is_empty());
+    assert_eq!(inclusive.len(), 1);
+    assert_eq!(inclusive[0].identifier(), "TestOnlyType");
+    assert_eq!(inclusive[0].value(), 1.0);
+}
+
+#[test]
+fn lcom_family_measures_inherent_struct_behavior_with_exact_formulas() {
+    let root = fixture("metrics_project");
+    let measure = |metric: &str| {
+        let family = metrics_in(root.as_path())
+            .for_types_matching("Service")
+            .lcom();
+        match metric {
+            "lcom96a" => family.lcom96a().measure(),
+            "lcom96b" => family.lcom96b().measure(),
+            "lcom1" => family.lcom1().measure(),
+            "lcom2" => family.lcom2().measure(),
+            "lcom3" => family.lcom3().measure(),
+            "lcom4" => family.lcom4().measure(),
+            "lcom5" => family.lcom5().measure(),
+            "lcom_star" => family.lcom_star().measure(),
+            _ => unreachable!("the test supplies only known LCOM metrics"),
+        }
+        .expect("LCOM measurement should succeed")
+    };
+    let cases = [
+        ("lcom96a", 0.5),
+        ("lcom96b", 1.0 / 3.0),
+        ("lcom1", 0.0),
+        ("lcom2", 1.0 / 3.0),
+        ("lcom3", 0.5),
+        ("lcom4", 1.0),
+        ("lcom5", 0.5),
+        ("lcom_star", 0.5),
+    ];
+
+    for (name, expected) in cases {
+        let measurements = measure(name);
+        assert_eq!(measurements.len(), 1);
+        assert_eq!(measurements[0].identifier(), "Service");
+        assert_eq!(measurements[0].metric_name(), name);
+        assert!(measurements[0].subject().as_type().is_some());
+        assert!(
+            (measurements[0].value() - expected).abs() < 0.000_001,
+            "unexpected {name} value"
+        );
+    }
+}
+
+#[test]
+fn lcom_population_excludes_non_struct_and_non_inherent_behavior() {
+    let project = metrics_in(fixture("metrics_project"))
+        .analyze()
+        .expect("the metrics fixture should be analyzable");
+    let eligibility = project
+        .types()
+        .iter()
+        .map(|type_info| {
+            (
+                type_info.name(),
+                LcomInput::from_type_info(type_info).is_some(),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        eligibility,
+        [
+            ("Port", false),
+            ("Repository", true),
+            ("Service", true),
+            ("State", false),
+            ("Word", false),
+        ]
+    );
+    let measurements = metrics_in(fixture("metrics_project"))
+        .lcom()
+        .lcom4()
+        .measure()
+        .expect("LCOM4 measurement should succeed");
+    assert_eq!(
+        measurements
+            .iter()
+            .map(|measurement| (measurement.identifier(), measurement.value()))
+            .collect::<Vec<_>>(),
+        [("Repository", 1.0), ("Service", 1.0)]
+    );
+}
+
+#[test]
+fn lcom_dev_sources_are_opt_in_and_empty_selections_remain_data() {
+    let root = fixture("metrics_project");
+    let selection = metrics_in(root.as_path())
+        .with_name("architecture.rs")
+        .lcom()
+        .lcom4();
+
+    assert!(
+        selection
+            .measure()
+            .expect("production selection should succeed")
+            .is_empty()
+    );
+    let inclusive = selection
+        .measure_with(&CheckOptions::new().with_test_sources(true))
+        .expect("dev-source LCOM should succeed");
     assert_eq!(inclusive.len(), 1);
     assert_eq!(inclusive[0].identifier(), "TestOnlyType");
     assert_eq!(inclusive[0].value(), 1.0);

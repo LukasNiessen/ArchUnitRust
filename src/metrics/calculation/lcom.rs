@@ -242,8 +242,8 @@ fn connected_components(input: &LcomInput) -> usize {
                 continue;
             }
             visited[method] = true;
-            for candidate in 0..method_count {
-                if !visited[candidate]
+            for (candidate, candidate_visited) in visited.iter().enumerate() {
+                if !candidate_visited
                     && fields_overlap(
                         &input.method_field_accesses[method],
                         &input.method_field_accesses[candidate],
@@ -264,6 +264,7 @@ fn fields_overlap(left: &BTreeSet<String>, right: &BTreeSet<String>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{LcomInput, LcomMetric};
+    use crate::extract_file_metrics;
 
     fn input(fields: &[&str], methods: &[&[&str]]) -> LcomInput {
         LcomInput::new(
@@ -374,6 +375,58 @@ mod tests {
         for metric in LcomMetric::ALL {
             assert!(!metric.description().is_empty());
             assert_eq!(metric.to_string(), metric.name());
+        }
+    }
+
+    #[test]
+    fn rust_population_keeps_only_unambiguous_inherent_struct_methods() {
+        let source = r#"
+trait Port { fn send(&self); }
+struct Eligible { field: usize }
+impl Eligible { fn inherent(&self) { let _ = self.field; } }
+impl Port for Eligible { fn send(&self) { let _ = self.field; } }
+
+struct MacroOnly { field: usize }
+macro_rules! generated { () => { fn generated(&self) { let _ = self.field; } }; }
+impl MacroOnly { generated!(); }
+
+mod first { pub struct Shared; }
+mod second { pub struct Shared; }
+impl Shared { fn unresolved(&self) {} }
+
+enum Choice { One }
+union Bits { integer: u32 }
+"#;
+        let file = extract_file_metrics("src/cohesion.rs", source).expect("fixture should parse");
+        let eligible = file
+            .types()
+            .iter()
+            .find(|type_info| type_info.name() == "Eligible")
+            .expect("Eligible should be extracted");
+        let input =
+            LcomInput::from_type_info(eligible).expect("Eligible should have inherent data");
+
+        assert_eq!(eligible.methods().len(), 2);
+        assert_eq!(eligible.inherent_methods().len(), 1);
+        assert_eq!(input.method_count(), 1);
+        assert_eq!(input.field_access_count(), 1);
+        for excluded in [
+            "Port",
+            "MacroOnly",
+            "first::Shared",
+            "second::Shared",
+            "Choice",
+            "Bits",
+        ] {
+            let type_info = file
+                .types()
+                .iter()
+                .find(|type_info| type_info.name() == excluded)
+                .expect("excluded type should still be extracted");
+            assert!(
+                LcomInput::from_type_info(type_info).is_none(),
+                "{excluded} must not enter the LCOM population"
+            );
         }
     }
 }
