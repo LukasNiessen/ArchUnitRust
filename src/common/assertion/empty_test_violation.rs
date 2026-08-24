@@ -1,4 +1,4 @@
-use crate::Filter;
+use crate::common::Filter;
 
 /// A rule selected no subject and therefore judged nothing.
 ///
@@ -40,7 +40,7 @@ impl EmptyTestViolation {
 #[cfg(test)]
 mod tests {
     use super::EmptyTestViolation;
-    use crate::RegexFactory;
+    use crate::common::RegexFactory;
 
     #[test]
     fn carries_selector_data_in_chain_order() {

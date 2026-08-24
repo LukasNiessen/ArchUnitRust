@@ -1,4 +1,4 @@
-use crate::Edge;
+use crate::common::Edge;
 
 /// A graph node with its incoming and outgoing raw dependency evidence.
 #[derive(Debug, Clone, PartialEq, Eq)]

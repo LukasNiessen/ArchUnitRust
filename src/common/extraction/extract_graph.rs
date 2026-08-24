@@ -2,7 +2,7 @@ use super::{
     CargoProject, Edge, ExtractionDiagnostic, Graph, SourceOptions, enumerate_source_files,
     extract_dependencies::extract_dependencies_from_sources,
 };
-use crate::ArchUnitError;
+use crate::common::ArchUnitError;
 
 /// A deterministic dependency graph together with non-fatal extraction diagnostics.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

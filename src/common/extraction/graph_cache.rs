@@ -7,7 +7,7 @@ use super::{
     CargoProject, DEFAULT_EXCLUDED_DIRECTORIES, GraphExtraction, SourceOptions,
     extract_graph::extract_graph_uncached,
 };
-use crate::{ArchUnitError, CheckOptions, TechnicalError};
+use crate::common::{ArchUnitError, CheckOptions, TechnicalError};
 
 const CFG_POLICY: &str = "conservative-union";
 const FEATURE_POLICY: &str = "cargo-metadata-declarations";
@@ -120,7 +120,7 @@ fn cache_lock_error(operation: &str) -> ArchUnitError {
 #[cfg(test)]
 mod tests {
     use super::{CFG_POLICY, build_graph_cache_key};
-    use crate::{SourceOptions, locate_project};
+    use crate::common::{SourceOptions, locate_project};
 
     #[test]
     fn named_key_changes_with_source_options_and_captures_policy() {

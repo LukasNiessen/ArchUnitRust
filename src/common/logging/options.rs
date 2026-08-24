@@ -8,7 +8,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::{ArchUnitError, LogLevel, LogRecord, TechnicalError, UserError};
+use crate::common::{ArchUnitError, LogLevel, LogRecord, TechnicalError, UserError};
 
 /// Initialization policy for an existing per-options log file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -311,7 +311,7 @@ mod tests {
     use std::{fs, process, thread, time::SystemTime};
 
     use super::{LogFileMode, LoggingOptions};
-    use crate::{CheckLogger, LogLevel};
+    use crate::common::{CheckLogger, LogLevel};
 
     fn temporary_directory(label: &str) -> std::path::PathBuf {
         let nonce = SystemTime::now()
@@ -443,9 +443,15 @@ mod tests {
             .info("record")
             .expect_err("filesystem conflict should be technical");
 
-        assert!(matches!(no_sink_error, crate::ArchUnitError::User(_)));
-        assert!(matches!(empty_error, crate::ArchUnitError::User(_)));
-        assert!(matches!(io_error, crate::ArchUnitError::Technical(_)));
+        assert!(matches!(
+            no_sink_error,
+            crate::common::ArchUnitError::User(_)
+        ));
+        assert!(matches!(empty_error, crate::common::ArchUnitError::User(_)));
+        assert!(matches!(
+            io_error,
+            crate::common::ArchUnitError::Technical(_)
+        ));
         fs::remove_dir_all(root).expect("temporary logging tree should be removable");
     }
 

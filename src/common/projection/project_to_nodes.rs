@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Edge, Graph};
+use crate::common::{Edge, Graph};
 
 use super::ProjectedNode;
 
@@ -75,7 +75,7 @@ pub fn project_to_nodes_with_options(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, ImportKind};
+    use crate::common::{Edge, Graph, ImportKind};
 
     use super::{NodeProjectionOptions, project_to_nodes, project_to_nodes_with_options};
 

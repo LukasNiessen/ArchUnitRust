@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::BTreeMap};
 
-use crate::{Edge, Graph};
+use crate::common::{Edge, Graph};
 
 use super::{ProjectedEdge, cycles::johnson_cycles, per_internal_edge, project_edges};
 
@@ -117,10 +117,10 @@ fn edges_for_path(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, ImportKind};
+    use crate::common::{Edge, Graph, ImportKind};
 
     use super::{project_cycles, project_internal_cycles};
-    use crate::ProjectedEdge;
+    use crate::common::ProjectedEdge;
 
     fn raw_edge(source: &str, target: &str, external: bool, kind: ImportKind) -> Edge {
         Edge::new(source, target, external, [kind])

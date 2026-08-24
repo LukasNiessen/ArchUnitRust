@@ -300,7 +300,7 @@ mod tests {
         DependencyExtraction, DependencyReference, DependencyTarget, ExtractionDiagnostic,
         ExtractionDiagnosticKind,
     };
-    use crate::ImportKind;
+    use crate::common::ImportKind;
 
     #[test]
     fn extraction_results_sort_and_deduplicate_data() {

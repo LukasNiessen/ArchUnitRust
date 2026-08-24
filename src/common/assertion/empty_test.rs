@@ -1,4 +1,4 @@
-use crate::Filter;
+use crate::common::Filter;
 
 use super::EmptyTestViolation;
 
@@ -28,7 +28,7 @@ pub fn gather_empty_test_violations<T>(
 #[cfg(test)]
 mod tests {
     use super::gather_empty_test_violations;
-    use crate::RegexFactory;
+    use crate::common::RegexFactory;
 
     #[test]
     fn empty_selection_produces_one_data_violation_with_selector_order_and_mood() {

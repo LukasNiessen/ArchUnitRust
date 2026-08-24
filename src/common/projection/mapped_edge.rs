@@ -1,4 +1,4 @@
-use crate::Edge;
+use crate::common::Edge;
 
 /// The labels produced when a raw dependency is mapped into a domain view.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -28,7 +28,7 @@ impl MappedEdge {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind};
+    use crate::common::{Edge, ImportKind};
 
     use super::MappedEdge;
 

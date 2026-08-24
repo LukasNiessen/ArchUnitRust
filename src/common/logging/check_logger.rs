@@ -1,4 +1,4 @@
-use crate::{ArchUnitError, LogEventKind, LogLevel, LogRecord, LoggingOptions};
+use crate::common::{ArchUnitError, LogEventKind, LogLevel, LogRecord, LoggingOptions};
 
 /// Stateless per-call façade over an explicitly borrowed [`LoggingOptions`] value.
 ///

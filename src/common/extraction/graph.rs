@@ -115,7 +115,7 @@ impl fmt::Display for Graph {
 #[cfg(test)]
 mod tests {
     use super::Graph;
-    use crate::{Edge, ImportKind};
+    use crate::common::{Edge, ImportKind};
 
     fn fixture_edges() -> [Edge; 2] {
         [

@@ -1,4 +1,4 @@
-use crate::Edge;
+use crate::common::Edge;
 
 use super::MappedEdge;
 
@@ -46,10 +46,10 @@ fn map_identity(edge: &Edge) -> Option<MappedEdge> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind};
+    use crate::common::{Edge, ImportKind};
 
     use super::{identity, per_edge, per_external_edge, per_internal_edge};
-    use crate::MappedEdge;
+    use crate::common::MappedEdge;
 
     fn internal_edge() -> Edge {
         Edge::new("src/source.rs", "src/target.rs", false, [ImportKind::Use])

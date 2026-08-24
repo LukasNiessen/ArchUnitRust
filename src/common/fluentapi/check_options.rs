@@ -1,4 +1,4 @@
-use crate::LoggingOptions;
+use crate::common::LoggingOptions;
 
 /// Options that control how one terminal architecture check runs.
 ///
@@ -88,7 +88,7 @@ impl Default for CheckOptions {
 #[cfg(test)]
 mod tests {
     use super::CheckOptions;
-    use crate::LoggingOptions;
+    use crate::common::LoggingOptions;
 
     #[test]
     fn defaults_are_strict_quiet_cached_and_production_only() {

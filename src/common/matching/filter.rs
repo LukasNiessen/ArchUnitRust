@@ -97,7 +97,7 @@ impl fmt::Display for Filter {
 #[cfg(test)]
 mod tests {
     use super::Filter;
-    use crate::{Pattern, PatternTarget};
+    use crate::common::{Pattern, PatternTarget};
 
     #[test]
     fn binds_patterns_to_each_target() {
