@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::{cell::Cell, panic::AssertUnwindSafe};
 
 use archunit::{
     ArchitecturalZone, CheckOptions, Checkable, DistanceMetric, LcomInput, MetricSubject, TypeKind,
@@ -386,4 +387,145 @@ fn zone_conditions_apply_the_shared_strict_empty_selection_guard() {
         "metric components"
     );
     assert!(allowed.is_empty());
+}
+
+#[test]
+fn custom_metrics_measure_full_selected_type_info_and_are_reusable() {
+    let calls = Cell::new(0);
+    let metric = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .custom_metric("member_count", "methods plus fields", |info| {
+            calls.set(calls.get() + 1);
+            (info.methods().len() + info.fields().len()) as f64
+        });
+
+    let first = metric
+        .measure()
+        .expect("custom metric measurement should succeed");
+    let second = metric
+        .measure()
+        .expect("the same custom metric should be reusable");
+
+    assert_eq!(calls.get(), 2);
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].identifier(), "Service");
+    assert_eq!(first[0].metric_name(), "member_count");
+    assert_eq!(first[0].description(), "methods plus fields");
+    assert_eq!(first[0].value(), 6.0);
+    let subject = first[0]
+        .subject()
+        .as_type()
+        .expect("custom metrics should retain the full TypeInfo subject");
+    assert_eq!(subject.fields().len(), 2);
+    assert_eq!(subject.methods().len(), 4);
+    assert_eq!(second[0].value(), first[0].value());
+}
+
+#[test]
+fn custom_metric_predicates_receive_value_and_type_and_return_typed_violations() {
+    let predicate_calls = Cell::new(0);
+    let metric = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .custom_metric("field_count", "at most one field", |info| {
+            info.fields().len() as f64
+        });
+    let rule = metric.should_satisfy(|value, info| {
+        predicate_calls.set(predicate_calls.get() + 1);
+        value <= 1.0 && info.name() == "Service"
+    });
+
+    let violations = rule.check().expect("custom predicate should be checkable");
+
+    assert_eq!(predicate_calls.get(), 1);
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].kind(), ViolationKind::CustomMetric);
+    let violation = violations[0]
+        .as_custom_metric()
+        .expect("the result should retain custom metric data");
+    assert_eq!(violation.type_info.name(), "Service");
+    assert_eq!(violation.metric_name, "field_count");
+    assert_eq!(violation.description, "at most one field");
+    assert_eq!(violation.value, 2.0);
+}
+
+#[test]
+fn custom_metric_rules_guard_empty_types_but_empty_measurements_are_data() {
+    let metric = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Missing*")
+        .custom_metric("fields", "field count", |info| info.fields().len() as f64);
+
+    assert!(
+        metric
+            .measure()
+            .expect("empty custom measurement should succeed")
+            .is_empty()
+    );
+    let rule = metric.should_satisfy(|_, _| true);
+    let strict = rule
+        .check()
+        .expect("empty custom rule should have a verdict");
+    let allowed = rule
+        .check_with(&CheckOptions::new().with_allow_empty_tests(true))
+        .expect("explicit empty custom rule should pass");
+
+    assert_eq!(strict.len(), 1);
+    assert_eq!(strict[0].kind(), ViolationKind::EmptyTest);
+    assert_eq!(
+        strict[0]
+            .as_empty_test()
+            .expect("strict result should contain empty-test data")
+            .subject,
+        "metric types"
+    );
+    assert!(allowed.is_empty());
+}
+
+#[test]
+fn custom_metric_configuration_errors_precede_project_discovery() {
+    let root = PathBuf::from("definitely/missing");
+    let empty_name = metrics_in(root.as_path())
+        .custom_metric(" ", "description", |_| 1.0)
+        .measure()
+        .expect_err("blank metric name should be invalid");
+    let empty_description = metrics_in(root.as_path())
+        .custom_metric("score", "", |_| 1.0)
+        .measure()
+        .expect_err("blank metric description should be invalid");
+    let first_selector_error = metrics_in(root)
+        .in_path("src/[")
+        .custom_metric("", "", |_| 1.0)
+        .measure()
+        .expect_err("the first fluent error should win");
+
+    assert!(matches!(empty_name, archunit::ArchUnitError::User(_)));
+    assert!(empty_name.to_string().contains("name must not be empty"));
+    assert!(
+        empty_description
+            .to_string()
+            .contains("description must not be empty")
+    );
+    assert!(
+        first_selector_error
+            .to_string()
+            .contains("invalid in_path pattern")
+    );
+}
+
+#[test]
+fn panics_from_custom_metric_callbacks_propagate() {
+    let calculation = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .custom_metric("panic", "panic propagation", |_| {
+            panic!("calculation panic")
+        });
+    let predicate = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .custom_metric("score", "predicate panic", |_| 1.0)
+        .should_satisfy(|_, _| panic!("predicate panic"));
+
+    let calculation_panic = std::panic::catch_unwind(AssertUnwindSafe(|| calculation.measure()));
+    let predicate_panic = std::panic::catch_unwind(AssertUnwindSafe(|| predicate.check()));
+
+    assert!(calculation_panic.is_err());
+    assert!(predicate_panic.is_err());
 }

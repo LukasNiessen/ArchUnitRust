@@ -2,12 +2,12 @@ use std::path::Path;
 
 use crate::{
     ArchUnitError, CheckOptions, CountMetric, DistanceInfo, DistanceMetric, Filter, LcomMetric,
-    MetricMeasurement, PatternError, PatternTarget, ProjectLocator, ProjectMetricsInfo,
-    RegexFactory, SourceOptions, UserError, extract_distance_infos, extract_project_metrics,
-    locate_project_from,
+    MetricMeasurement, MetricSubject, PatternError, PatternTarget, ProjectLocator,
+    ProjectMetricsInfo, RegexFactory, SourceOptions, TypeInfo, UserError, extract_distance_infos,
+    extract_project_metrics, locate_project_from,
 };
 
-use super::MetricZoneCondition;
+use super::{CustomMetricCondition, MetricZoneCondition};
 
 /// Starts a metrics query with Cargo discovery at the working directory.
 pub fn metrics() -> MetricsBuilder {
@@ -114,6 +114,36 @@ impl MetricsBuilder {
         DistanceMetricsBuilder { query: self }
     }
 
+    /// Defines a reusable numeric metric over every selected Rust type.
+    ///
+    /// The calculation receives an immutable [`TypeInfo`] and is invoked once per type on each
+    /// execution. Panics from the user callback propagate normally.
+    pub fn custom_metric<Calculation>(
+        mut self,
+        name: impl Into<String>,
+        description: impl Into<String>,
+        calculation: Calculation,
+    ) -> CustomMetricSelection<Calculation>
+    where
+        Calculation: Fn(&TypeInfo) -> f64,
+    {
+        let name = name.into();
+        let description = description.into();
+        if name.trim().is_empty() {
+            self.record_custom_metric_error(MetricsConfigurationError::EmptyCustomMetricName);
+        } else if description.trim().is_empty() {
+            self.record_custom_metric_error(
+                MetricsConfigurationError::EmptyCustomMetricDescription,
+            );
+        }
+        CustomMetricSelection {
+            query: self,
+            name,
+            description,
+            calculation,
+        }
+    }
+
     /// Returns the explicit discovery path, or `None` for automatic discovery.
     #[must_use]
     pub fn project_path(&self) -> Option<&Path> {
@@ -164,6 +194,12 @@ impl MetricsBuilder {
         &self.filters
     }
 
+    fn record_custom_metric_error(&mut self, error: MetricsConfigurationError) {
+        if self.configuration_error.is_none() {
+            self.configuration_error = Some(error);
+        }
+    }
+
     fn file_matches(&self, path: &str) -> bool {
         self.filters
             .iter()
@@ -189,6 +225,90 @@ impl MetricsBuilder {
             self.configuration_error =
                 Some(MetricsConfigurationError::InvalidPattern { selector, source });
         }
+    }
+}
+
+/// A user-defined type metric that can be measured or turned into a predicate rule.
+#[derive(Debug, Clone)]
+#[must_use = "a custom metric has no effect until measure or should_satisfy is called"]
+pub struct CustomMetricSelection<Calculation> {
+    query: MetricsBuilder,
+    name: String,
+    description: String,
+    calculation: Calculation,
+}
+
+impl<Calculation> CustomMetricSelection<Calculation>
+where
+    Calculation: Fn(&TypeInfo) -> f64,
+{
+    /// Extracts and measures selected production-source types.
+    ///
+    /// Panics from the custom calculation propagate normally.
+    pub fn measure(&self) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
+        self.measure_with(&CheckOptions::default())
+    }
+
+    /// Extracts and measures selected types with explicit source-target options.
+    ///
+    /// Panics from the custom calculation propagate normally.
+    pub fn measure_with(
+        &self,
+        check_options: &CheckOptions,
+    ) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
+        let types = self.selected_types_with(check_options)?;
+        Ok(types
+            .into_iter()
+            .map(|type_info| {
+                let value = (self.calculation)(&type_info);
+                MetricMeasurement::from_parts(
+                    MetricSubject::Type(type_info),
+                    &self.name,
+                    &self.description,
+                    value,
+                )
+            })
+            .collect())
+    }
+
+    /// Creates a reusable rule whose predicate receives the value and the same type evidence.
+    ///
+    /// Panics from either callback propagate normally.
+    pub fn should_satisfy<Predicate>(
+        self,
+        predicate: Predicate,
+    ) -> CustomMetricCondition<Calculation, Predicate>
+    where
+        Predicate: Fn(f64, &TypeInfo) -> bool,
+    {
+        CustomMetricCondition::new(self, predicate)
+    }
+
+    /// Returns the user-defined metric name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the user-defined metric description.
+    #[must_use]
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+
+    pub(super) fn selected_types_with(
+        &self,
+        check_options: &CheckOptions,
+    ) -> Result<Vec<TypeInfo>, ArchUnitError> {
+        Ok(self.query.analyze_with(check_options)?.types().to_vec())
+    }
+
+    pub(super) fn calculation(&self) -> &Calculation {
+        &self.calculation
+    }
+
+    pub(super) fn filters(&self) -> &[Filter] {
+        self.query.filters()
     }
 }
 
@@ -468,6 +588,10 @@ enum MetricsConfigurationError {
         #[source]
         source: PatternError,
     },
+    #[error("custom metric name must not be empty")]
+    EmptyCustomMetricName,
+    #[error("custom metric description must not be empty")]
+    EmptyCustomMetricDescription,
 }
 
 fn configuration_error(error: MetricsConfigurationError) -> ArchUnitError {

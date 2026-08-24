@@ -1,8 +1,8 @@
 use crate::{
-    CustomFileViolation, CycleViolation, EmptyTestViolation, ExternalModuleDependencyViolation,
-    FileDependencyViolation, FilePatternViolation, LayerDependencyRule, LayerDependencyViolation,
-    MetricZoneViolation, ProjectedEdge, SliceDependencyRule, SliceDependencyViolation,
-    TestViolation, Violation,
+    CustomFileViolation, CustomMetricViolation, CycleViolation, EmptyTestViolation,
+    ExternalModuleDependencyViolation, FileDependencyViolation, FilePatternViolation,
+    LayerDependencyRule, LayerDependencyViolation, MetricZoneViolation, ProjectedEdge,
+    SliceDependencyRule, SliceDependencyViolation, TestViolation, Violation,
 };
 
 /// The sole mapping from structured violation data to human-readable prose.
@@ -25,6 +25,7 @@ impl ViolationFactory {
             Violation::LayerDependency(violation) => format_layer_dependency(violation),
             Violation::SliceDependency(violation) => format_slice_dependency(violation),
             Violation::MetricZone(violation) => format_metric_zone(violation),
+            Violation::CustomMetric(violation) => format_custom_metric(violation),
         }
     }
 }
@@ -220,6 +221,19 @@ fn format_metric_zone(violation: &MetricZoneViolation) -> TestViolation {
             violation.zone,
             violation.abstractness,
             violation.instability
+        ),
+    )
+}
+
+fn format_custom_metric(violation: &CustomMetricViolation) -> TestViolation {
+    TestViolation::new(
+        "Custom metric violation",
+        format!(
+            "Type '{}' failed custom metric '{}': {} (value {}).",
+            violation.type_info.name(),
+            violation.metric_name,
+            violation.description,
+            violation.value
         ),
     )
 }
@@ -431,6 +445,30 @@ mod tests {
         assert_eq!(
             formatted.details,
             "Component 'src/stable.rs' is in the zone of pain (abstractness 0.000, instability 0.000)."
+        );
+    }
+
+    #[test]
+    fn formats_custom_metric_with_type_definition_and_value() {
+        let type_info = extract_file_metrics("src/service.rs", "struct Service { port: usize }")
+            .expect("fixture should parse")
+            .types()
+            .first()
+            .expect("fixture should have one type")
+            .clone();
+        let violation = Violation::from(crate::CustomMetricViolation::new(
+            type_info,
+            "field_count",
+            "must have no more than zero fields",
+            1.0,
+        ));
+
+        let formatted = ViolationFactory::from_violation(&violation);
+
+        assert_eq!(formatted.message, "Custom metric violation");
+        assert_eq!(
+            formatted.details,
+            "Type 'Service' failed custom metric 'field_count': must have no more than zero fields (value 1)."
         );
     }
 }
