@@ -170,15 +170,20 @@ fn public_logger_exposes_the_complete_raw_and_specialized_vocabulary() {
 
 #[test]
 fn invalid_logging_configuration_precedes_rule_io_and_is_typed() {
-    let no_sink =
-        CheckOptions::new().with_logging(LoggingOptions::new().with_console_output(false));
-    let error = project_files_in("definitely/missing")
-        .should()
-        .have_no_cycles()
-        .check_with(&no_sink)
-        .expect_err("invalid logging should prevent rule execution");
+    for level in [LogLevel::Debug, LogLevel::Error] {
+        let no_sink = CheckOptions::new().with_logging(
+            LoggingOptions::new()
+                .with_level(level)
+                .with_console_output(false),
+        );
+        let error = project_files_in("definitely/missing")
+            .should()
+            .have_no_cycles()
+            .check_with(&no_sink)
+            .expect_err("invalid logging should prevent rule execution");
 
-    assert!(matches!(error, ArchUnitError::User(_)));
-    assert!(error.to_string().contains("logging must enable"));
-    assert!(!error.to_string().contains("Cargo"));
+        assert!(matches!(error, ArchUnitError::User(_)));
+        assert!(error.to_string().contains("logging must enable"));
+        assert!(!error.to_string().contains("Cargo"));
+    }
 }

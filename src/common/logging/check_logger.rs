@@ -22,6 +22,14 @@ impl<'a> CheckLogger<'a> {
         self.options.is_some()
     }
 
+    /// Validates the explicitly configured sinks without emitting a record.
+    ///
+    /// Built-in architecture checks call this before project discovery. Custom [`crate::Checkable`]
+    /// implementations can do the same when they use this logger directly.
+    pub fn validate(&self) -> Result<(), ArchUnitError> {
+        self.options.map_or(Ok(()), LoggingOptions::validate)
+    }
+
     /// Logs the beginning of one named architecture check.
     pub fn start_check(&self, rule_name: impl AsRef<str>) -> Result<(), ArchUnitError> {
         self.emit(LogLevel::Info, LogEventKind::StartCheck, rule_name)
@@ -121,6 +129,7 @@ mod tests {
         let logger = CheckLogger::new(None);
 
         assert!(!logger.is_enabled());
+        assert!(logger.validate().is_ok());
         assert!(logger.start_check("rule").is_ok());
         assert!(logger.log_progress("progress").is_ok());
         assert!(logger.log_violation("violation").is_ok());

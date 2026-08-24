@@ -20,6 +20,7 @@ where
     Operation: FnOnce(&CheckLogger<'_>) -> CheckResult,
 {
     let logger = CheckLogger::new(options.logging());
+    logger.validate()?;
     logger.start_check(rule_name)?;
     let result = operation(&logger);
     match result {
