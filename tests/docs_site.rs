@@ -160,7 +160,11 @@ fn every_chapter_is_attached_to_the_doctest_host() {
     );
 
     let library = fs::read_to_string("src/lib.rs").expect("library root should be readable");
-    assert!(library.contains("#[cfg(doctest)]\nmod site_docs;"));
+    assert!(
+        library
+            .replace("\r\n", "\n")
+            .contains("#[cfg(doctest)]\nmod site_docs;")
+    );
 }
 
 #[test]
@@ -198,6 +202,7 @@ fn pages_workflow_builds_the_guide_and_api_from_the_same_commit() {
         "branches: [main]",
         "cargo +1.85.0 test --doc --all-features",
         "cargo +1.85.0 test --test docs_site",
+        "cp -R target/doc/. docs/api/",
         "source: ./docs",
         "cargo +1.85.0 doc --all-features --no-deps",
         "actions/upload-pages-artifact@v5",
