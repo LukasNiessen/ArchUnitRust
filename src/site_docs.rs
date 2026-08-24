@@ -29,3 +29,9 @@ struct MetricsPage;
 
 #[doc = include_str!("../docs/graph.md")]
 struct GraphPage;
+
+#[doc = include_str!("../docs/running.md")]
+struct RunningPage;
+
+#[doc = include_str!("../docs/internals.md")]
+struct InternalsPage;
