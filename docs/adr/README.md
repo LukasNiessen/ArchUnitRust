@@ -22,3 +22,4 @@ rewriting history after released behavior depends on it.
 - [0016: Use source files as distance components](0016-use-source-files-as-distance-components.md)
 - [0017: Own generic custom metric callbacks](0017-own-generic-custom-metric-callbacks.md)
 - [0018: Use exact measurement-backed thresholds](0018-use-exact-measurement-backed-thresholds.md)
+- [0019: Export deterministic offline metrics reports](0019-export-deterministic-offline-metrics-reports.md)

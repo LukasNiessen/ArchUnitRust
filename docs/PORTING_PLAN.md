@@ -210,6 +210,13 @@ Thresholds are finite and exact; `should_be` uses `f64` equality without an impl
 Built-in predicates receive `MetricSubject` so count metrics can preserve their file-or-type subject
 level. The fluent vocabulary deliberately has no threshold synonyms. See ADR 0018.
 
+Metrics reports cross the rendering boundary as a deterministic ordered map of display names to
+display values. Count, LCOM, and distance family exporters calculate their complete family from one
+selected project snapshot, then write a self-contained offline HTML file. Output paths and parent
+directories are normalized by the library; presentation options control the title, optional UTC
+timestamp, and replacement CSS. Type identifiers include their source path to avoid collisions.
+See ADR 0019.
+
 ## Test and quality strategy
 
 Every issue lands both kinds of tests where applicable:
