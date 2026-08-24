@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    ArchUnitError, CheckOptions, CountMetric, Filter, MetricMeasurement, PatternError,
+    ArchUnitError, CheckOptions, CountMetric, Filter, LcomMetric, MetricMeasurement, PatternError,
     ProjectLocator, ProjectMetricsInfo, RegexFactory, SourceOptions, UserError,
     extract_project_metrics, locate_project_from,
 };
@@ -101,6 +101,12 @@ impl MetricsBuilder {
         CountMetricsBuilder { query: self }
     }
 
+    /// Enters the lack-of-cohesion metric family for eligible Rust structs.
+    #[must_use = "choose an LCOM formula before measuring"]
+    pub fn lcom(self) -> LcomMetricsBuilder {
+        LcomMetricsBuilder { query: self }
+    }
+
     /// Returns the explicit discovery path, or `None` for automatic discovery.
     #[must_use]
     pub fn project_path(&self) -> Option<&Path> {
@@ -138,6 +144,92 @@ impl MetricsBuilder {
             self.configuration_error =
                 Some(MetricsConfigurationError::InvalidPattern { selector, source });
         }
+    }
+}
+
+/// LCOM formula choices over eligible structs in one immutable selection.
+#[derive(Debug, Clone)]
+#[must_use = "choose an LCOM formula before measuring"]
+pub struct LcomMetricsBuilder {
+    query: MetricsBuilder,
+}
+
+impl LcomMetricsBuilder {
+    /// Selects normalized method/field distance under the LCOM96a name.
+    pub fn lcom96a(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom96a)
+    }
+
+    /// Selects the method/field density complement under the LCOM96b name.
+    pub fn lcom96b(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom96b)
+    }
+
+    /// Selects non-sharing minus sharing method pairs.
+    pub fn lcom1(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom1)
+    }
+
+    /// Selects the method/field density complement.
+    pub fn lcom2(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom2)
+    }
+
+    /// Selects normalized method/field distance.
+    pub fn lcom3(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom3)
+    }
+
+    /// Selects shared-field method graph connected components.
+    pub fn lcom4(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom4)
+    }
+
+    /// Selects normalized Henderson-Sellers method/field distance.
+    pub fn lcom5(self) -> LcomMetricSelection {
+        self.select(LcomMetric::Lcom5)
+    }
+
+    /// Selects normalized LCOM-star method/field distance.
+    pub fn lcom_star(self) -> LcomMetricSelection {
+        self.select(LcomMetric::LcomStar)
+    }
+
+    fn select(self, metric: LcomMetric) -> LcomMetricSelection {
+        LcomMetricSelection {
+            query: self.query,
+            metric,
+        }
+    }
+}
+
+/// One selected LCOM formula ready for extraction and measurement.
+#[derive(Debug, Clone)]
+#[must_use = "an LCOM selection has no effect until measure is called"]
+pub struct LcomMetricSelection {
+    query: MetricsBuilder,
+    metric: LcomMetric,
+}
+
+impl LcomMetricSelection {
+    /// Extracts and measures eligible production-source structs.
+    pub fn measure(&self) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
+        self.measure_with(&CheckOptions::default())
+    }
+
+    /// Extracts and measures eligible structs with explicit source-target options.
+    pub fn measure_with(
+        &self,
+        check_options: &CheckOptions,
+    ) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
+        let project = self.query.analyze_with(check_options)?;
+        Ok(self.metric.measurements(&project))
+    }
+
+    /// Returns the selected LCOM formula.
+    #[must_use]
+    pub const fn metric(&self) -> LcomMetric {
+        self.metric
     }
 }
 
@@ -264,7 +356,7 @@ mod tests {
     use std::path::Path;
 
     use super::{metrics, metrics_in};
-    use crate::{ArchUnitError, CountMetric, ProjectLocator};
+    use crate::{ArchUnitError, CountMetric, LcomMetric, ProjectLocator};
 
     #[test]
     fn builders_are_consuming_cloneable_and_branchable() {
@@ -323,6 +415,25 @@ mod tests {
                 query.count().associated_functions(),
                 CountMetric::AssociatedFunctions,
             ),
+        ];
+
+        for (selection, expected) in cases {
+            assert_eq!(selection.metric(), expected);
+        }
+    }
+
+    #[test]
+    fn every_lcom_terminal_retains_the_expected_metric() {
+        let query = metrics();
+        let cases = [
+            (query.clone().lcom().lcom96a(), LcomMetric::Lcom96a),
+            (query.clone().lcom().lcom96b(), LcomMetric::Lcom96b),
+            (query.clone().lcom().lcom1(), LcomMetric::Lcom1),
+            (query.clone().lcom().lcom2(), LcomMetric::Lcom2),
+            (query.clone().lcom().lcom3(), LcomMetric::Lcom3),
+            (query.clone().lcom().lcom4(), LcomMetric::Lcom4),
+            (query.clone().lcom().lcom5(), LcomMetric::Lcom5),
+            (query.lcom().lcom_star(), LcomMetric::LcomStar),
         ];
 
         for (selection, expected) in cases {

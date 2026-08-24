@@ -2,4 +2,7 @@
 
 mod builder;
 
-pub use builder::{CountMetricsBuilder, MetricSelection, MetricsBuilder, metrics, metrics_in};
+pub use builder::{
+    CountMetricsBuilder, LcomMetricSelection, LcomMetricsBuilder, MetricSelection, MetricsBuilder,
+    metrics, metrics_in,
+};
