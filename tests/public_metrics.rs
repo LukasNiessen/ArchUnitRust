@@ -16,6 +16,22 @@ fn project_analysis_associates_impls_and_preserves_field_access_evidence() {
 
     assert_eq!(project.files().len(), 3);
     assert_eq!(project.types().len(), 5);
+    assert_eq!(
+        project
+            .files()
+            .iter()
+            .map(|file| file.path())
+            .collect::<Vec<_>>(),
+        ["src/domain.rs", "src/extensions.rs", "src/lib.rs"]
+    );
+    assert_eq!(
+        project
+            .types()
+            .iter()
+            .map(|type_info| type_info.name())
+            .collect::<Vec<_>>(),
+        ["Port", "Repository", "Service", "State", "Word"]
+    );
     let service = project
         .types()
         .iter()

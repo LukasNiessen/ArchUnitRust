@@ -477,8 +477,9 @@ fn associate_impls(files: &mut [FileMetricsInfo]) {
                     .iter()
                     .filter(|method| method.accessed_fields.contains(&field.name))
                     .map(|method| method.name.clone())
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
                     .collect();
-                field.accessed_by.sort();
             }
         }
     }
@@ -756,5 +757,48 @@ impl Shared { fn ambiguous(&self) {} }
         assert_eq!(metrics.impls().len(), 1);
         assert_eq!(metrics.impls()[0].target_type(), "Shared");
         assert_eq!(metrics.impls()[0].methods()[0].name(), "ambiguous");
+    }
+
+    #[test]
+    fn applies_explicit_field_semantics_to_every_rust_type_kind() {
+        let source = r#"
+struct Named { left: u8, right: u8 }
+struct Tuple(u8, u8);
+struct Unit;
+enum Choice { Named { code: u8 }, Tuple(u8, u8), Unit }
+union Bits { integer: u32, bytes: [u8; 4] }
+trait Contract { fn apply(&self); }
+"#;
+        let metrics = extract_file_metrics("src/types.rs", source).expect("fixture should parse");
+        let cases = [
+            ("Named", TypeKind::Struct, vec!["left", "right"]),
+            ("Tuple", TypeKind::Struct, vec!["0", "1"]),
+            ("Unit", TypeKind::Struct, vec![]),
+            (
+                "Choice",
+                TypeKind::Enum,
+                vec!["Named.code", "Tuple.0", "Tuple.1"],
+            ),
+            ("Bits", TypeKind::Union, vec!["integer", "bytes"]),
+            ("Contract", TypeKind::Trait, vec![]),
+        ];
+
+        for (name, kind, expected_fields) in cases {
+            let type_info = metrics
+                .types()
+                .iter()
+                .find(|type_info| type_info.name() == name)
+                .expect("table type should be extracted");
+            assert_eq!(type_info.kind(), kind, "unexpected kind for {name}");
+            assert_eq!(
+                type_info
+                    .fields()
+                    .iter()
+                    .map(|field| field.name())
+                    .collect::<Vec<_>>(),
+                expected_fields,
+                "unexpected fields for {name}"
+            );
+        }
     }
 }

@@ -315,11 +315,17 @@ impl ProjectMetricsInfo {
         &self.types
     }
 
-    pub(crate) fn from_files(root: PathBuf, files: Vec<FileMetricsInfo>) -> Self {
-        let types = files
+    pub(crate) fn from_files(root: PathBuf, mut files: Vec<FileMetricsInfo>) -> Self {
+        files.sort_by(|left, right| left.path.cmp(&right.path));
+        let mut types = files
             .iter()
             .flat_map(|file| file.types.iter().cloned())
-            .collect();
+            .collect::<Vec<_>>();
+        types.sort_by(|left, right| {
+            left.file_path
+                .cmp(&right.file_path)
+                .then_with(|| left.name.cmp(&right.name))
+        });
         Self { root, files, types }
     }
 }
