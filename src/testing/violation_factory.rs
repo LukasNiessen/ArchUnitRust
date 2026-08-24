@@ -1,7 +1,7 @@
 use crate::{
     CustomFileViolation, CycleViolation, EmptyTestViolation, ExternalModuleDependencyViolation,
     FileDependencyViolation, FilePatternViolation, LayerDependencyRule, LayerDependencyViolation,
-    ProjectedEdge, TestViolation, Violation,
+    ProjectedEdge, SliceDependencyRule, SliceDependencyViolation, TestViolation, Violation,
 };
 
 /// The sole mapping from structured violation data to human-readable prose.
@@ -22,6 +22,7 @@ impl ViolationFactory {
             }
             Violation::CustomFile(violation) => format_custom_file(violation),
             Violation::LayerDependency(violation) => format_layer_dependency(violation),
+            Violation::SliceDependency(violation) => format_slice_dependency(violation),
         }
     }
 }
@@ -186,6 +187,24 @@ fn format_layer_dependency(violation: &LayerDependencyViolation) -> TestViolatio
     )
 }
 
+fn format_slice_dependency(violation: &SliceDependencyViolation) -> TestViolation {
+    let relationship = match violation.rule {
+        SliceDependencyRule::ContainDependency if violation.is_negated => format!(
+            "Slice '{}' depends on forbidden slice '{}'.",
+            violation.source_slice, violation.target_slice
+        ),
+        SliceDependencyRule::ContainDependency => format!(
+            "Slice '{}' does not contain the required dependency on slice '{}'.",
+            violation.source_slice, violation.target_slice
+        ),
+    };
+
+    TestViolation::new(
+        "Slice dependency violation",
+        format!("{relationship}{}", evidence_suffix(&violation.dependency)),
+    )
+}
+
 fn evidence_suffix(edge: &ProjectedEdge) -> String {
     if edge.cumulated_edges.is_empty() {
         String::new()
@@ -207,7 +226,7 @@ mod tests {
         CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
         ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
         Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, ProjectedEdge,
-        RegexFactory, Violation, project_to_nodes,
+        RegexFactory, SliceDependencyRule, SliceDependencyViolation, Violation, project_to_nodes,
     };
 
     use super::ViolationFactory;
@@ -345,6 +364,23 @@ mod tests {
         assert_eq!(
             ViolationFactory::from_violation(&forbidden).details,
             "Layer 'api' depends on forbidden layer 'database'. File dependency: 'src/api.rs' -> 'src/db.rs'. Evidence: src/api.rs -> src/db.rs [use, path_reference]."
+        );
+    }
+
+    #[test]
+    fn formats_forbidden_slice_dependency_with_concrete_rust_evidence() {
+        let dependency = projected("src/api.rs", "src/db.rs", false);
+        let violation = Violation::from(SliceDependencyViolation::new(
+            dependency,
+            "api",
+            "database",
+            SliceDependencyRule::ContainDependency,
+            true,
+        ));
+
+        assert_eq!(
+            ViolationFactory::from_violation(&violation).details,
+            "Slice 'api' depends on forbidden slice 'database'. Evidence: src/api.rs -> src/db.rs [use, path_reference]."
         );
     }
 }
