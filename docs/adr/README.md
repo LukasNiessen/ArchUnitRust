@@ -28,3 +28,4 @@ rewriting history after released behavior depends on it.
 - [0022: Enforce a Rust-aware self-architecture](0022-enforce-rust-aware-self-architecture.md)
 - [0023: Publish a source-checked guide beside rustdoc](0023-publish-a-source-checked-guide-beside-rustdoc.md)
 - [0024: Split CI by evidence and supported host](0024-split-ci-by-evidence-and-supported-host.md)
+- [0025: Bootstrap once, then publish with short-lived credentials](0025-bootstrap-then-use-trusted-publishing.md)

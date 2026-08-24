@@ -4,7 +4,7 @@ ArchUnitRust follows the same issue-driven product plan as the other ArchUnitEve
 an intentionally sequential delivery workflow while the initial public surface is being formed.
 
 Read [AGENTS.md](AGENTS.md), the [porting plan](docs/PORTING_PLAN.md), and the relevant issue before
-changing code.
+changing code. Release maintainers must also follow [RELEASING.md](RELEASING.md).
 
 ## Workflow
 
@@ -39,6 +39,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo test --doc
 cargo doc --workspace --all-features --no-deps
+cargo package --locked
 ```
 
 Tests must be deterministic and independent of execution order. Public failures should assert the
