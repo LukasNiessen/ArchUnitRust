@@ -1,7 +1,8 @@
 use crate::{
     CustomFileViolation, CycleViolation, EmptyTestViolation, ExternalModuleDependencyViolation,
     FileDependencyViolation, FilePatternViolation, LayerDependencyRule, LayerDependencyViolation,
-    ProjectedEdge, SliceDependencyRule, SliceDependencyViolation, TestViolation, Violation,
+    MetricZoneViolation, ProjectedEdge, SliceDependencyRule, SliceDependencyViolation,
+    TestViolation, Violation,
 };
 
 /// The sole mapping from structured violation data to human-readable prose.
@@ -23,6 +24,7 @@ impl ViolationFactory {
             Violation::CustomFile(violation) => format_custom_file(violation),
             Violation::LayerDependency(violation) => format_layer_dependency(violation),
             Violation::SliceDependency(violation) => format_slice_dependency(violation),
+            Violation::MetricZone(violation) => format_metric_zone(violation),
         }
     }
 }
@@ -209,6 +211,19 @@ fn format_slice_dependency(violation: &SliceDependencyViolation) -> TestViolatio
     )
 }
 
+fn format_metric_zone(violation: &MetricZoneViolation) -> TestViolation {
+    TestViolation::new(
+        "Metric zone violation",
+        format!(
+            "Component '{}' is in the zone of {} (abstractness {:.3}, instability {:.3}).",
+            violation.distance_info.identifier(),
+            violation.zone,
+            violation.abstractness,
+            violation.instability
+        ),
+    )
+}
+
 fn evidence_suffix(edge: &ProjectedEdge) -> String {
     if edge.cumulated_edges.is_empty() {
         String::new()
@@ -226,11 +241,15 @@ fn evidence_suffix(edge: &ProjectedEdge) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use crate::{
-        CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
+        ArchitecturalZone, CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
         ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
-        Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, ProjectedEdge,
-        RegexFactory, SliceDependencyRule, SliceDependencyViolation, Violation, project_to_nodes,
+        Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, MetricZoneViolation,
+        ProjectMetricsInfo, ProjectedEdge, RegexFactory, SliceDependencyRule,
+        SliceDependencyViolation, Violation, build_distance_infos, extract_file_metrics,
+        project_to_nodes,
     };
 
     use super::ViolationFactory;
@@ -385,6 +404,33 @@ mod tests {
         assert_eq!(
             ViolationFactory::from_violation(&violation).details,
             "Slice 'api' depends on forbidden slice 'database'. Evidence: src/api.rs -> src/db.rs [use, path_reference]."
+        );
+    }
+
+    #[test]
+    fn formats_metric_zone_with_component_and_coordinates() {
+        let metrics = ProjectMetricsInfo::from_files(
+            PathBuf::from("fixture"),
+            vec![
+                extract_file_metrics("src/stable.rs", "struct Stable;")
+                    .expect("fixture should parse"),
+            ],
+        );
+        let info = build_distance_infos(
+            &metrics,
+            &Graph::from_edges([Edge::self_edge("src/stable.rs")]),
+        )
+        .into_iter()
+        .next()
+        .expect("fixture should produce one component");
+        let violation = Violation::from(MetricZoneViolation::new(info, ArchitecturalZone::Pain));
+
+        let formatted = ViolationFactory::from_violation(&violation);
+
+        assert_eq!(formatted.message, "Metric zone violation");
+        assert_eq!(
+            formatted.details,
+            "Component 'src/stable.rs' is in the zone of pain (abstractness 0.000, instability 0.000)."
         );
     }
 }

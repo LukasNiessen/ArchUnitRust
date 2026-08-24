@@ -1,11 +1,16 @@
 //! Pure metric calculations over extracted subjects.
 
+mod distance;
 mod lcom;
 
 use std::fmt;
 
-use super::extraction::{FileMetricsInfo, ProjectMetricsInfo, TypeInfo};
+use super::extraction::{DistanceInfo, FileMetricsInfo, ProjectMetricsInfo, TypeInfo};
 
+pub use distance::{
+    ArchitecturalZone, DistanceInput, DistanceMetric, MAXIMUM_SIZE_DISCOUNT, PAIN_LIMIT,
+    SIZE_NORMALIZATION_LINES, USELESSNESS_LIMIT,
+};
 pub use lcom::{LcomInput, LcomMetric};
 
 /// A built-in count metric and its valid Rust subject population.
@@ -137,6 +142,8 @@ pub enum MetricSubject {
     File(FileMetricsInfo),
     /// One Rust type declaration.
     Type(TypeInfo),
+    /// One file-level component with its project coupling evidence.
+    Distance(DistanceInfo),
 }
 
 impl MetricSubject {
@@ -146,6 +153,7 @@ impl MetricSubject {
         match self {
             Self::File(file) => file.path(),
             Self::Type(type_info) => type_info.name(),
+            Self::Distance(info) => info.identifier(),
         }
     }
 
@@ -154,7 +162,7 @@ impl MetricSubject {
     pub const fn as_file(&self) -> Option<&FileMetricsInfo> {
         match self {
             Self::File(file) => Some(file),
-            Self::Type(_) => None,
+            Self::Type(_) | Self::Distance(_) => None,
         }
     }
 
@@ -163,7 +171,16 @@ impl MetricSubject {
     pub const fn as_type(&self) -> Option<&TypeInfo> {
         match self {
             Self::Type(type_info) => Some(type_info),
-            Self::File(_) => None,
+            Self::File(_) | Self::Distance(_) => None,
+        }
+    }
+
+    /// Returns the component distance subject, if this measurement uses project coupling.
+    #[must_use]
+    pub const fn as_distance(&self) -> Option<&DistanceInfo> {
+        match self {
+            Self::Distance(info) => Some(info),
+            Self::File(_) | Self::Type(_) => None,
         }
     }
 }

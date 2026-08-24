@@ -1,10 +1,13 @@
 use std::path::Path;
 
 use crate::{
-    ArchUnitError, CheckOptions, CountMetric, Filter, LcomMetric, MetricMeasurement, PatternError,
-    ProjectLocator, ProjectMetricsInfo, RegexFactory, SourceOptions, UserError,
-    extract_project_metrics, locate_project_from,
+    ArchUnitError, CheckOptions, CountMetric, DistanceInfo, DistanceMetric, Filter, LcomMetric,
+    MetricMeasurement, PatternError, PatternTarget, ProjectLocator, ProjectMetricsInfo,
+    RegexFactory, SourceOptions, UserError, extract_distance_infos, extract_project_metrics,
+    locate_project_from,
 };
+
+use super::MetricZoneCondition;
 
 /// Starts a metrics query with Cargo discovery at the working directory.
 pub fn metrics() -> MetricsBuilder {
@@ -21,8 +24,7 @@ pub fn metrics_in(locator: impl Into<ProjectLocator>) -> MetricsBuilder {
 #[must_use = "a metrics query has no effect until analyze or measure is called"]
 pub struct MetricsBuilder {
     project_locator: ProjectLocator,
-    file_filters: Vec<Filter>,
-    type_filters: Vec<Filter>,
+    filters: Vec<Filter>,
     configuration_error: Option<MetricsConfigurationError>,
 }
 
@@ -30,8 +32,7 @@ impl MetricsBuilder {
     const fn new(project_locator: ProjectLocator) -> Self {
         Self {
             project_locator,
-            file_filters: Vec::new(),
-            type_filters: Vec::new(),
+            filters: Vec::new(),
             configuration_error: None,
         }
     }
@@ -39,7 +40,7 @@ impl MetricsBuilder {
     /// Keeps source files whose final path segment matches `pattern`.
     pub fn with_name(mut self, pattern: impl AsRef<str>) -> Self {
         match RegexFactory::default().filename_matcher(pattern) {
-            Ok(filter) => self.file_filters.push(filter),
+            Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("with_name", source),
         }
         self
@@ -48,7 +49,7 @@ impl MetricsBuilder {
     /// Keeps source files whose containing folder matches `pattern`.
     pub fn in_folder(mut self, pattern: impl AsRef<str>) -> Self {
         match RegexFactory::default().folder_matcher(pattern) {
-            Ok(filter) => self.file_filters.push(filter),
+            Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("in_folder", source),
         }
         self
@@ -57,7 +58,7 @@ impl MetricsBuilder {
     /// Keeps source files whose normalized project path matches `pattern`.
     pub fn in_path(mut self, pattern: impl AsRef<str>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
-            Ok(filter) => self.file_filters.push(filter),
+            Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("in_path", source),
         }
         self
@@ -70,7 +71,7 @@ impl MetricsBuilder {
     /// properties of the containing file.
     pub fn for_types_matching(mut self, pattern: impl AsRef<str>) -> Self {
         match RegexFactory::default().type_name_matcher(pattern) {
-            Ok(filter) => self.type_filters.push(filter),
+            Ok(filter) => self.filters.push(filter),
             Err(source) => self.record_pattern_error("for_types_matching", source),
         }
         self
@@ -107,6 +108,12 @@ impl MetricsBuilder {
         LcomMetricsBuilder { query: self }
     }
 
+    /// Enters the file-component distance metric family.
+    #[must_use = "choose a distance formula or zone check before executing"]
+    pub fn distance(self) -> DistanceMetricsBuilder {
+        DistanceMetricsBuilder { query: self }
+    }
+
     /// Returns the explicit discovery path, or `None` for automatic discovery.
     #[must_use]
     pub fn project_path(&self) -> Option<&Path> {
@@ -118,25 +125,63 @@ impl MetricsBuilder {
         let mut files = project
             .files()
             .iter()
-            .filter(|file| {
-                self.file_filters
-                    .iter()
-                    .all(|filter| filter.matches(file.path()))
-            })
+            .filter(|file| self.file_matches(file.path()))
             .cloned()
             .collect::<Vec<_>>();
 
-        if !self.type_filters.is_empty() {
+        if self.has_type_filters() {
             for file in &mut files {
-                file.retain_types(|type_info| {
-                    self.type_filters
-                        .iter()
-                        .all(|filter| filter.matches(type_info.name()))
-                });
+                file.retain_types(|type_info| self.type_matches(type_info.name()));
             }
             files.retain(|file| !file.types().is_empty());
         }
         ProjectMetricsInfo::from_files(root, files)
+    }
+
+    pub(super) fn distance_infos_with(
+        &self,
+        check_options: &CheckOptions,
+    ) -> Result<Vec<DistanceInfo>, ArchUnitError> {
+        if let Some(error) = &self.configuration_error {
+            return Err(configuration_error(error.clone()));
+        }
+
+        let project = locate_project_from(&self.project_locator)?;
+        let mut infos = extract_distance_infos(&project, check_options)?;
+        infos.retain(|info| {
+            self.file_matches(info.identifier())
+                && (!self.has_type_filters()
+                    || info
+                        .file()
+                        .types()
+                        .iter()
+                        .any(|type_info| self.type_matches(type_info.name())))
+        });
+        Ok(infos)
+    }
+
+    pub(super) fn filters(&self) -> &[Filter] {
+        &self.filters
+    }
+
+    fn file_matches(&self, path: &str) -> bool {
+        self.filters
+            .iter()
+            .filter(|filter| filter.target() != PatternTarget::TypeName)
+            .all(|filter| filter.matches(path))
+    }
+
+    fn type_matches(&self, name: &str) -> bool {
+        self.filters
+            .iter()
+            .filter(|filter| filter.target() == PatternTarget::TypeName)
+            .all(|filter| filter.matches(name))
+    }
+
+    fn has_type_filters(&self) -> bool {
+        self.filters
+            .iter()
+            .any(|filter| filter.target() == PatternTarget::TypeName)
     }
 
     fn record_pattern_error(&mut self, selector: &'static str, source: PatternError) {
@@ -144,6 +189,87 @@ impl MetricsBuilder {
             self.configuration_error =
                 Some(MetricsConfigurationError::InvalidPattern { selector, source });
         }
+    }
+}
+
+/// Distance formula and architectural-zone choices over file components.
+#[derive(Debug, Clone)]
+#[must_use = "choose a distance formula or zone check before executing"]
+pub struct DistanceMetricsBuilder {
+    query: MetricsBuilder,
+}
+
+impl DistanceMetricsBuilder {
+    /// Selects trait-declaration abstractness.
+    pub fn abstractness(self) -> DistanceMetricSelection {
+        self.select(DistanceMetric::Abstractness)
+    }
+
+    /// Selects incoming/outgoing dependency instability.
+    pub fn instability(self) -> DistanceMetricSelection {
+        self.select(DistanceMetric::Instability)
+    }
+
+    /// Selects absolute distance from the main sequence.
+    pub fn distance_from_main_sequence(self) -> DistanceMetricSelection {
+        self.select(DistanceMetric::DistanceFromMainSequence)
+    }
+
+    /// Selects bidirectional internal coupling density.
+    pub fn coupling_factor(self) -> DistanceMetricSelection {
+        self.select(DistanceMetric::CouplingFactor)
+    }
+
+    /// Selects size-discounted distance from the main sequence.
+    pub fn normalized_distance(self) -> DistanceMetricSelection {
+        self.select(DistanceMetric::NormalizedDistance)
+    }
+
+    /// Rejects components with low abstractness and low instability.
+    pub fn not_in_zone_of_pain(self) -> MetricZoneCondition {
+        MetricZoneCondition::new(self.query, crate::ArchitecturalZone::Pain)
+    }
+
+    /// Rejects components with high abstractness and high instability.
+    pub fn not_in_zone_of_uselessness(self) -> MetricZoneCondition {
+        MetricZoneCondition::new(self.query, crate::ArchitecturalZone::Uselessness)
+    }
+
+    fn select(self, metric: DistanceMetric) -> DistanceMetricSelection {
+        DistanceMetricSelection {
+            query: self.query,
+            metric,
+        }
+    }
+}
+
+/// One selected component-distance formula ready for extraction and measurement.
+#[derive(Debug, Clone)]
+#[must_use = "a distance selection has no effect until measure is called"]
+pub struct DistanceMetricSelection {
+    query: MetricsBuilder,
+    metric: DistanceMetric,
+}
+
+impl DistanceMetricSelection {
+    /// Extracts and measures production-source components.
+    pub fn measure(&self) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
+        self.measure_with(&CheckOptions::default())
+    }
+
+    /// Extracts and measures components with explicit source-target options.
+    pub fn measure_with(
+        &self,
+        check_options: &CheckOptions,
+    ) -> Result<Vec<MetricMeasurement>, ArchUnitError> {
+        let infos = self.query.distance_infos_with(check_options)?;
+        Ok(self.metric.measurements(&infos))
+    }
+
+    /// Returns the selected distance formula.
+    #[must_use]
+    pub const fn metric(&self) -> DistanceMetric {
+        self.metric
     }
 }
 
@@ -356,7 +482,9 @@ mod tests {
     use std::path::Path;
 
     use super::{metrics, metrics_in};
-    use crate::{ArchUnitError, CountMetric, LcomMetric, ProjectLocator};
+    use crate::{
+        ArchUnitError, ArchitecturalZone, CountMetric, DistanceMetric, LcomMetric, ProjectLocator,
+    };
 
     #[test]
     fn builders_are_consuming_cloneable_and_branchable() {
@@ -439,5 +567,48 @@ mod tests {
         for (selection, expected) in cases {
             assert_eq!(selection.metric(), expected);
         }
+    }
+
+    #[test]
+    fn every_distance_terminal_retains_the_expected_formula_or_zone() {
+        let query = metrics();
+        let metrics = [
+            (
+                query.clone().distance().abstractness().metric(),
+                DistanceMetric::Abstractness,
+            ),
+            (
+                query.clone().distance().instability().metric(),
+                DistanceMetric::Instability,
+            ),
+            (
+                query
+                    .clone()
+                    .distance()
+                    .distance_from_main_sequence()
+                    .metric(),
+                DistanceMetric::DistanceFromMainSequence,
+            ),
+            (
+                query.clone().distance().coupling_factor().metric(),
+                DistanceMetric::CouplingFactor,
+            ),
+            (
+                query.clone().distance().normalized_distance().metric(),
+                DistanceMetric::NormalizedDistance,
+            ),
+        ];
+
+        for (actual, expected) in metrics {
+            assert_eq!(actual, expected);
+        }
+        assert_eq!(
+            query.clone().distance().not_in_zone_of_pain().zone(),
+            ArchitecturalZone::Pain
+        );
+        assert_eq!(
+            query.distance().not_in_zone_of_uselessness().zone(),
+            ArchitecturalZone::Uselessness
+        );
     }
 }

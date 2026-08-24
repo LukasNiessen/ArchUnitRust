@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use archunit::{CheckOptions, LcomInput, MetricSubject, TypeKind, metrics_in};
+use archunit::{
+    ArchitecturalZone, CheckOptions, Checkable, DistanceMetric, LcomInput, MetricSubject, TypeKind,
+    ViolationKind, metrics_in,
+};
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -275,4 +278,112 @@ fn lcom_dev_sources_are_opt_in_and_empty_selections_remain_data() {
     assert_eq!(inclusive.len(), 1);
     assert_eq!(inclusive[0].identifier(), "TestOnlyType");
     assert_eq!(inclusive[0].value(), 1.0);
+}
+
+#[test]
+fn distance_family_measures_file_components_with_full_project_coupling() {
+    let root = fixture("distance_project");
+    let measure = |metric: DistanceMetric| {
+        let family = metrics_in(root.as_path())
+            .for_types_matching("Gateway")
+            .distance();
+        match metric {
+            DistanceMetric::Abstractness => family.abstractness().measure(),
+            DistanceMetric::Instability => family.instability().measure(),
+            DistanceMetric::DistanceFromMainSequence => {
+                family.distance_from_main_sequence().measure()
+            }
+            DistanceMetric::CouplingFactor => family.coupling_factor().measure(),
+            DistanceMetric::NormalizedDistance => family.normalized_distance().measure(),
+            _ => unreachable!("the test supplies built-in distance metrics"),
+        }
+        .expect("distance measurement should succeed")
+    };
+
+    let expected = [
+        (DistanceMetric::Abstractness, 1.0),
+        (DistanceMetric::Instability, 1.0),
+        (DistanceMetric::DistanceFromMainSequence, 1.0),
+        (DistanceMetric::CouplingFactor, 0.5),
+    ];
+    for (metric, value) in expected {
+        let measurements = measure(metric);
+        assert_eq!(measurements.len(), 1);
+        assert_eq!(measurements[0].identifier(), "src/lib.rs");
+        assert_eq!(measurements[0].metric_name(), metric.name());
+        assert_eq!(measurements[0].value(), value);
+        let info = measurements[0]
+            .subject()
+            .as_distance()
+            .expect("distance measurements retain coupling evidence");
+        assert_eq!(info.afferent_coupling(), 0);
+        assert_eq!(info.efferent_coupling(), 2);
+        assert_eq!(info.project_file_count(), 3);
+    }
+
+    let normalized = measure(DistanceMetric::NormalizedDistance);
+    assert!(normalized[0].value() < 1.0);
+    assert!(normalized[0].value() >= 0.5);
+}
+
+#[test]
+fn zone_conditions_return_typed_violations_for_both_discouraged_regions() {
+    let root = fixture("distance_project");
+    let pain_rule = metrics_in(root.as_path())
+        .with_name("first.rs")
+        .distance()
+        .not_in_zone_of_pain();
+    let uselessness_rule = metrics_in(root.as_path())
+        .with_name("lib.rs")
+        .distance()
+        .not_in_zone_of_uselessness();
+
+    let pain = pain_rule.check().expect("pain-zone check should succeed");
+    let uselessness = uselessness_rule
+        .check()
+        .expect("uselessness-zone check should succeed");
+
+    assert_eq!(pain.len(), 1);
+    assert_eq!(pain[0].kind(), ViolationKind::MetricZone);
+    let pain = pain[0]
+        .as_metric_zone()
+        .expect("the violation should retain metrics-zone data");
+    assert_eq!(pain.zone, ArchitecturalZone::Pain);
+    assert_eq!(pain.distance_info.identifier(), "src/first.rs");
+    assert_eq!((pain.abstractness, pain.instability), (0.0, 0.0));
+
+    assert_eq!(uselessness.len(), 1);
+    let uselessness = uselessness[0]
+        .as_metric_zone()
+        .expect("the violation should retain metrics-zone data");
+    assert_eq!(uselessness.zone, ArchitecturalZone::Uselessness);
+    assert_eq!(uselessness.distance_info.identifier(), "src/lib.rs");
+    assert_eq!(
+        (uselessness.abstractness, uselessness.instability),
+        (1.0, 1.0)
+    );
+}
+
+#[test]
+fn zone_conditions_apply_the_shared_strict_empty_selection_guard() {
+    let rule = metrics_in(fixture("distance_project"))
+        .in_path("missing/**")
+        .distance()
+        .not_in_zone_of_pain();
+
+    let strict = rule.check().expect("empty selection has a verdict");
+    let allowed = rule
+        .check_with(&CheckOptions::new().with_allow_empty_tests(true))
+        .expect("explicit empty selection should be allowed");
+
+    assert_eq!(strict.len(), 1);
+    assert_eq!(strict[0].kind(), ViolationKind::EmptyTest);
+    assert_eq!(
+        strict[0]
+            .as_empty_test()
+            .expect("strict result should contain empty-test data")
+            .subject,
+        "metric components"
+    );
+    assert!(allowed.is_empty());
 }

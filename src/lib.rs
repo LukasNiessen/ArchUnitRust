@@ -67,16 +67,20 @@ pub use layers::fluentapi::{
     LayerDefinitionBuilder, LayerDependencyRuleBuilder, LayeredArchitecture, layers, layers_in,
     project_layers, project_layers_in,
 };
+pub use metrics::assertion::{MetricZoneViolation, gather_metric_zone_violations};
 pub use metrics::calculation::{
-    CountMetric, LcomInput, LcomMetric, MetricMeasurement, MetricSubject,
+    ArchitecturalZone, CountMetric, DistanceInput, DistanceMetric, LcomInput, LcomMetric,
+    MAXIMUM_SIZE_DISCOUNT, MetricMeasurement, MetricSubject, PAIN_LIMIT, SIZE_NORMALIZATION_LINES,
+    USELESSNESS_LIMIT,
 };
 pub use metrics::extraction::{
-    FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, MetricsExtractionError, ProjectMetricsInfo,
-    TypeInfo, TypeKind, extract_file_metrics, extract_project_metrics,
+    DistanceInfo, FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, MetricsExtractionError,
+    ProjectMetricsInfo, TypeInfo, TypeKind, build_distance_infos, extract_distance_infos,
+    extract_file_metrics, extract_project_metrics,
 };
 pub use metrics::fluentapi::{
-    CountMetricsBuilder, LcomMetricSelection, LcomMetricsBuilder, MetricSelection, MetricsBuilder,
-    metrics, metrics_in,
+    CountMetricsBuilder, DistanceMetricSelection, DistanceMetricsBuilder, LcomMetricSelection,
+    LcomMetricsBuilder, MetricSelection, MetricZoneCondition, MetricsBuilder, metrics, metrics_in,
 };
 pub use slices::assertion::{
     DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation,
