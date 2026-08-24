@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::ProjectLocator;
+use crate::common::ProjectLocator;
 
 use super::SliceScopeBuilder;
 

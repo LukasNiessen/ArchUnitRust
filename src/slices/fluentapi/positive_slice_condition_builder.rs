@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::DiagramAdherenceOptions;
+use crate::slices::DiagramAdherenceOptions;
 
 use super::{DiagramSliceCondition, DiagramSource, SliceScopeBuilder};
 
@@ -56,7 +56,7 @@ impl PositiveSliceConditionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::project_slices;
+    use crate::slices::project_slices;
 
     #[test]
     fn modifiers_are_consuming_branchable_values() {

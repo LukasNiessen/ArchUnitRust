@@ -1,8 +1,15 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, DiagramAdherenceOptions, PlantUmlParser,
-    ProjectLocator, SliceProjection, UserError, Violation, extract_graph_with_options,
-    gather_diagram_adherence_violations, gather_empty_test_violations, locate_project_from,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, ProjectLocator, UserError, extract_graph_with_options,
+        gather_empty_test_violations, locate_project_from,
+    },
+    slices::{
+        DiagramAdherenceOptions, PlantUmlParser, SliceProjection,
+        gather_diagram_adherence_violations,
+    },
+    violation::Violation,
 };
 
 use super::{DiagramSource, SliceConfigurationError, SliceScopeBuilder};
@@ -115,7 +122,7 @@ impl Checkable for DiagramSliceCondition {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ArchUnitError, Checkable, project_slices_in};
+    use crate::{checkable::Checkable, common::ArchUnitError, slices::project_slices_in};
 
     #[test]
     fn scope_errors_precede_empty_diagram_input_and_project_discovery() {

@@ -1,4 +1,4 @@
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 use super::{SliceDependencyRule, SliceDependencyViolation};
 
@@ -27,7 +27,7 @@ pub fn gather_forbidden_slice_dependency_violations(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::gather_forbidden_slice_dependency_violations;
 

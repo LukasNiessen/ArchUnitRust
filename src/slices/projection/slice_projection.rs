@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, error::Error, fmt};
 use regex::Regex;
 
 use crate::common::extraction::normalize_identifier;
-use crate::{
+use crate::common::{
     Edge, Filter, Graph, MappedEdge, PatternSpec, PatternSyntax, PatternTarget, ProjectedGraph,
     RegexFactory, RegexFactoryOptions, project_edges,
 };
@@ -326,7 +326,7 @@ fn glob_fragment(fragment: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, ImportKind, MappedEdge, pattern};
+    use crate::common::{Edge, Graph, ImportKind, MappedEdge, pattern};
 
     use super::{slice_by_file_suffix, slice_by_pattern, slice_by_regex, slice_identity};
 

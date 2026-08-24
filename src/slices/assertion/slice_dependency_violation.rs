@@ -1,4 +1,4 @@
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 use super::SliceDependencyRule;
 
@@ -40,7 +40,7 @@ impl SliceDependencyViolation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::{SliceDependencyRule, SliceDependencyViolation};
 

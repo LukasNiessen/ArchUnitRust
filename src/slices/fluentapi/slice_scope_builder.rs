@@ -1,9 +1,14 @@
 use std::path::Path;
 
 use crate::{
-    ArchUnitError, CheckOptions, PlantUmlRenderer, ProjectLocator, SliceProjection,
-    SliceProjectionError, export_plantuml_report, extract_graph_with_options, locate_project_from,
-    slice_by_pattern, slice_by_regex, slice_identity,
+    common::{
+        ArchUnitError, CheckOptions, ProjectLocator, extract_graph_with_options,
+        locate_project_from,
+    },
+    slices::{
+        PlantUmlRenderer, SliceProjection, SliceProjectionError, export_plantuml_report,
+        slice_by_pattern, slice_by_regex, slice_identity,
+    },
 };
 
 use super::{
@@ -29,13 +34,13 @@ impl SliceScopeBuilder {
     }
 
     /// Defines slice names through exactly one `(**)` path capture.
-    pub fn defined_by(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn defined_by(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         self.set_projection(slice_by_pattern(pattern), "pattern");
         self
     }
 
     /// Defines slice names through the first capture in a Rust regular expression.
-    pub fn defined_by_regex(mut self, expression: impl Into<crate::PatternSpec>) -> Self {
+    pub fn defined_by_regex(mut self, expression: impl Into<crate::common::PatternSpec>) -> Self {
         self.set_projection(slice_by_regex(expression), "regular-expression");
         self
     }
@@ -72,8 +77,11 @@ impl SliceScopeBuilder {
         let edges = self.projection().project(graph);
         let components = self.projection().slice_labels(graph);
         PlantUmlRenderer::render_with_components(&edges, &components).map_err(|source| {
-            crate::UserError::with_source("the generated PlantUML diagram is invalid", source)
-                .into()
+            crate::common::UserError::with_source(
+                "the generated PlantUML diagram is invalid",
+                source,
+            )
+            .into()
         })
     }
 
@@ -136,7 +144,7 @@ impl SliceScopeBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{project_slices, slice_by_file_suffix};
+    use crate::slices::{project_slices, slice_by_file_suffix};
 
     #[test]
     fn definitions_are_consuming_branchable_values() {
