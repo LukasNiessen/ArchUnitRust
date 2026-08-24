@@ -240,6 +240,7 @@ impl<'a> TypeCollector<'a> {
             file_path: self.file_path.to_owned(),
             kind,
             methods: Vec::new(),
+            inherent_methods: Vec::new(),
             fields,
             associated_functions: Vec::new(),
         });
@@ -311,6 +312,7 @@ impl<'ast> Visit<'ast> for TypeCollector<'_> {
             file_path: self.file_path.to_owned(),
             kind: TypeKind::Trait,
             methods,
+            inherent_methods: Vec::new(),
             fields: Vec::new(),
             associated_functions,
         });
@@ -459,6 +461,14 @@ fn associate_impls(files: &mut [FileMetricsInfo]) {
             continue;
         };
         let type_info = &mut files[file].types[type_index];
+        if !impl_info.is_trait_impl() {
+            type_info
+                .inherent_methods
+                .extend(impl_info.methods.iter().cloned());
+            type_info
+                .inherent_methods
+                .sort_by(|left, right| left.name.cmp(&right.name));
+        }
         type_info.methods.extend(impl_info.methods);
         type_info
             .associated_functions
@@ -680,6 +690,14 @@ macro_rules! local { () => {}; }
             .expect("Service should be extracted");
         assert_eq!(service.kind(), TypeKind::Struct);
         assert_eq!(service.methods().len(), 3);
+        assert_eq!(
+            service
+                .inherent_methods()
+                .iter()
+                .map(|method| method.name())
+                .collect::<Vec<_>>(),
+            ["execute", "increment"]
+        );
         assert_eq!(service.fields().len(), 2);
         assert_eq!(metrics.impls()[0].associated_functions(), &["new"]);
         assert_eq!(service.fields()[0].accessed_by(), &["execute"]);
@@ -694,6 +712,7 @@ macro_rules! local { () => {}; }
             .find(|type_info| type_info.name() == "Port")
             .expect("Port should be extracted");
         assert_eq!(port.methods().len(), 2);
+        assert!(port.inherent_methods().is_empty());
         assert!(
             !port
                 .methods()

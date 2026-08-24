@@ -1,8 +1,12 @@
 //! Pure metric calculations over extracted subjects.
 
+mod lcom;
+
 use std::fmt;
 
 use super::extraction::{FileMetricsInfo, ProjectMetricsInfo, TypeInfo};
+
+pub use lcom::{LcomInput, LcomMetric};
 
 /// A built-in count metric and its valid Rust subject population.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -81,7 +85,12 @@ impl CountMetric {
                         Self::FieldCount => type_info.fields().len(),
                         _ => 0,
                     };
-                    MetricMeasurement::new(MetricSubject::Type(type_info), self, value)
+                    MetricMeasurement::from_parts(
+                        MetricSubject::Type(type_info),
+                        self.name(),
+                        self.description(),
+                        value as f64,
+                    )
                 })
                 .collect();
         }
@@ -103,7 +112,12 @@ impl CountMetric {
                     Self::AssociatedFunctions => file.associated_functions(),
                     Self::MethodCount | Self::FieldCount => 0,
                 };
-                MetricMeasurement::new(MetricSubject::File(file), self, value)
+                MetricMeasurement::from_parts(
+                    MetricSubject::File(file),
+                    self.name(),
+                    self.description(),
+                    value as f64,
+                )
             })
             .collect()
     }
@@ -165,12 +179,17 @@ pub struct MetricMeasurement {
 }
 
 impl MetricMeasurement {
-    fn new(subject: MetricSubject, metric: CountMetric, value: usize) -> Self {
+    pub(crate) fn from_parts(
+        subject: MetricSubject,
+        metric_name: impl Into<String>,
+        description: impl Into<String>,
+        value: f64,
+    ) -> Self {
         Self {
             subject,
-            metric_name: metric.name().to_owned(),
-            description: metric.description().to_owned(),
-            value: value as f64,
+            metric_name: metric_name.into(),
+            description: description.into(),
+            value,
         }
     }
 

@@ -122,6 +122,7 @@ pub struct TypeInfo {
     pub(crate) file_path: String,
     pub(crate) kind: TypeKind,
     pub(crate) methods: Vec<MethodInfo>,
+    pub(crate) inherent_methods: Vec<MethodInfo>,
     pub(crate) fields: Vec<FieldInfo>,
     pub(crate) associated_functions: Vec<String>,
 }
@@ -155,6 +156,15 @@ impl TypeInfo {
     #[must_use]
     pub fn methods(&self) -> &[MethodInfo] {
         &self.methods
+    }
+
+    /// Returns only methods declared in unambiguously associated inherent impl blocks.
+    ///
+    /// Trait declarations and trait-impl methods remain visible through [`Self::methods`] but do
+    /// not participate in this collection.
+    #[must_use]
+    pub fn inherent_methods(&self) -> &[MethodInfo] {
+        &self.inherent_methods
     }
 
     /// Returns declared data fields.
