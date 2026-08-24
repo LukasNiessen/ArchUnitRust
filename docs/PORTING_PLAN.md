@@ -288,7 +288,7 @@ preserve the small conventional commits made on the branch.
 | Metrics | #32-#37 | Rust-defined counts, cohesion, coupling, custom metrics, and HTML export work |
 | Cross-cutting | #39 | Opt-in deterministic logging is covered |
 | Self-hosting | #40 | ArchUnitRust enforces its own module rules |
-| Adoption | #41-#43 | README and the source-checked rustdoc/GitHub Pages site are live; the full CI matrix remains |
+| Adoption | #41-#43 | README, source-checked rustdoc/GitHub Pages, and the full CI matrix are live |
 | Release | #44 | A verified package is published and install instructions are tested |
 
 Issue #38 stays open until every selector family has exclusion coverage, even though the matching
