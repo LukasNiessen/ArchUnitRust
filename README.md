@@ -1,5 +1,8 @@
 # ArchUnitRust
 
+[![CI](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/ci.yml/badge.svg)](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/ci.yml)
+[![Documentation](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/pages.yml/badge.svg)](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/pages.yml)
+
 Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUnitRust is part of
 **ArchUnitEverything** — one architecture-testing library per language.
 
@@ -141,7 +144,6 @@ The sections after this guide are the detailed reference for the implemented sur
 
 - crates.io publication is tracked by [#44](https://github.com/LukasNiessen/ArchUnitRust/issues/44),
   so installation currently uses the Git repository;
-- repository CI is tracked by [#43](https://github.com/LukasNiessen/ArchUnitRust/issues/43);
 - extraction is syntax-based: it does not expand macros or inspect build-script-generated source,
   evaluates `cfg` branches as a conservative union, and exposes files rather than Rust items as
   dependency nodes.

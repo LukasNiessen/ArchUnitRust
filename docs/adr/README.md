@@ -27,3 +27,4 @@ rewriting history after released behavior depends on it.
 - [0021: Keep logging explicit and scoped to a check](0021-keep-logging-explicit-and-scoped-to-a-check.md)
 - [0022: Enforce a Rust-aware self-architecture](0022-enforce-rust-aware-self-architecture.md)
 - [0023: Publish a source-checked guide beside rustdoc](0023-publish-a-source-checked-guide-beside-rustdoc.md)
+- [0024: Split CI by evidence and supported host](0024-split-ci-by-evidence-and-supported-host.md)
