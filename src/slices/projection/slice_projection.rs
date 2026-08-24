@@ -131,10 +131,10 @@ impl SliceProjection {
             if let Some(label) = self.label_for(&edge.source) {
                 labels.insert(label);
             }
-            if !edge.external
-                && let Some(label) = self.label_for(&edge.target)
-            {
-                labels.insert(label);
+            if !edge.external {
+                if let Some(label) = self.label_for(&edge.target) {
+                    labels.insert(label);
+                }
             }
         }
         labels.into_iter().collect()
