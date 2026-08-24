@@ -8,6 +8,7 @@ use crate::files::assertion::{
     FileDependencyViolation, FilePatternViolation,
 };
 use crate::layers::assertion::LayerDependencyViolation;
+use crate::metrics::assertion::MetricZoneViolation;
 use crate::slices::assertion::SliceDependencyViolation;
 
 /// The machine-readable family of a [`Violation`].
@@ -32,6 +33,8 @@ pub enum ViolationKind {
     LayerDependency,
     /// A projected dependency disagrees with a slice policy.
     SliceDependency,
+    /// A file component lies in a discouraged abstractness/instability zone.
+    MetricZone,
 }
 
 impl ViolationKind {
@@ -47,6 +50,7 @@ impl ViolationKind {
             Self::CustomFile => "custom-file",
             Self::LayerDependency => "layer-dependency",
             Self::SliceDependency => "slice-dependency",
+            Self::MetricZone => "metric-zone",
         }
     }
 }
@@ -80,6 +84,8 @@ pub enum Violation {
     LayerDependency(LayerDependencyViolation),
     /// A projected dependency disagrees with a slice policy.
     SliceDependency(SliceDependencyViolation),
+    /// A file component lies inside a discouraged metrics zone.
+    MetricZone(MetricZoneViolation),
 }
 
 impl Violation {
@@ -95,6 +101,7 @@ impl Violation {
             Self::CustomFile(_) => ViolationKind::CustomFile,
             Self::LayerDependency(_) => ViolationKind::LayerDependency,
             Self::SliceDependency(_) => ViolationKind::SliceDependency,
+            Self::MetricZone(_) => ViolationKind::MetricZone,
         }
     }
 
@@ -109,7 +116,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -124,7 +132,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -139,7 +148,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -154,7 +164,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -171,7 +182,8 @@ impl Violation {
             | Self::FileDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -186,7 +198,8 @@ impl Violation {
             | Self::FileDependency(_)
             | Self::ExternalModuleDependency(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -201,7 +214,8 @@ impl Violation {
             | Self::FileDependency(_)
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 
@@ -216,7 +230,24 @@ impl Violation {
             | Self::FileDependency(_)
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
-            | Self::LayerDependency(_) => None,
+            | Self::LayerDependency(_)
+            | Self::MetricZone(_) => None,
+        }
+    }
+
+    /// Returns metric-zone data when this is a distance-zone violation.
+    #[must_use]
+    pub const fn as_metric_zone(&self) -> Option<&MetricZoneViolation> {
+        match self {
+            Self::MetricZone(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_)
+            | Self::SliceDependency(_) => None,
         }
     }
 }
@@ -266,6 +297,12 @@ impl From<LayerDependencyViolation> for Violation {
 impl From<SliceDependencyViolation> for Violation {
     fn from(violation: SliceDependencyViolation) -> Self {
         Self::SliceDependency(violation)
+    }
+}
+
+impl From<MetricZoneViolation> for Violation {
+    fn from(violation: MetricZoneViolation) -> Self {
+        Self::MetricZone(violation)
     }
 }
 
