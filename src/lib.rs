@@ -53,6 +53,10 @@ pub use graph::projection::{
     GraphSnapshotFactory, PatternCollapse, aggregate_graph_edges, collapse_graph_node,
     create_graph_snapshot,
 };
+pub use graph::rendering::{
+    CsvRenderer, D2Renderer, DotRenderer, GraphRenderer, GraphReportFormat, HtmlRenderer,
+    JsonRenderer, MermaidRenderer, export_graph_report,
+};
 pub use layers::assertion::{
     LayerDefinition, LayerDependencyRule, LayerDependencyViolation,
     gather_layer_dependency_violations,
