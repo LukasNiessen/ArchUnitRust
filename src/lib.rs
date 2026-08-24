@@ -68,7 +68,9 @@ pub use layers::fluentapi::{
     project_layers, project_layers_in,
 };
 pub use metrics::calculation::{
-    CountMetric, LcomInput, LcomMetric, MetricMeasurement, MetricSubject,
+    ArchitecturalZone, CountMetric, DistanceInput, DistanceMetric, LcomInput, LcomMetric,
+    MAXIMUM_SIZE_DISCOUNT, MetricMeasurement, MetricSubject, PAIN_LIMIT, SIZE_NORMALIZATION_LINES,
+    USELESSNESS_LIMIT,
 };
 pub use metrics::extraction::{
     DistanceInfo, FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, MetricsExtractionError,
