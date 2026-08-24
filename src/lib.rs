@@ -66,6 +66,13 @@ pub use layers::fluentapi::{
     LayerDefinitionBuilder, LayerDependencyRuleBuilder, LayeredArchitecture, layers, layers_in,
     project_layers, project_layers_in,
 };
+pub use slices::assertion::{
+    SliceDependencyRule, SliceDependencyViolation, gather_forbidden_slice_dependency_violations,
+};
+pub use slices::fluentapi::{
+    ForbiddenSliceDependencyCondition, NegativeSliceConditionBuilder, SliceScopeBuilder,
+    project_slices, project_slices_in, slices, slices_in,
+};
 pub use slices::projection::{
     SliceProjection, SliceProjectionError, slice_by_file_suffix, slice_by_pattern, slice_by_regex,
     slice_identity,
