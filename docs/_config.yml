@@ -1,0 +1,39 @@
+title: ArchUnitRust
+description: Architecture rules as ordinary Rust tests.
+lang: en
+
+url: https://lukasniessen.github.io
+baseurl: /ArchUnitRust
+
+repository_url: https://github.com/LukasNiessen/ArchUnitRust
+api_reference_path: /api/archunit/
+
+siblings:
+  - name: ArchUnitTS
+    url: https://github.com/LukasNiessen/ArchUnitTS
+  - name: ArchUnitGo
+    url: https://github.com/LukasNiessen/ArchUnitGo
+  - name: ArchUnitNET
+    url: https://github.com/LukasNiessen/ArchUnitNET
+  - name: ArchUnitRuby
+    url: https://github.com/LukasNiessen/ArchUnitRuby
+
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  hard_wrap: false
+
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: false
+
+# Architecture records live beside the guide but are not pages of the user-facing site.
+exclude:
+  - PORTING_PLAN.md
+  - adr
+
