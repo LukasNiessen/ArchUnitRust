@@ -197,6 +197,10 @@ fn format_slice_dependency(violation: &SliceDependencyViolation) -> TestViolatio
             "Slice '{}' does not contain the required dependency on slice '{}'.",
             violation.source_slice, violation.target_slice
         ),
+        SliceDependencyRule::AdhereToDiagram => format!(
+            "Slice '{}' depends on slice '{}', which is not allowed by the architecture diagram.",
+            violation.source_slice, violation.target_slice
+        ),
     };
 
     TestViolation::new(

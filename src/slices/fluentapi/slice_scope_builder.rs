@@ -1,9 +1,14 @@
+use std::path::Path;
+
 use crate::{
-    ProjectLocator, SliceProjection, SliceProjectionError, slice_by_pattern, slice_by_regex,
-    slice_identity,
+    ArchUnitError, CheckOptions, PlantUmlRenderer, ProjectLocator, SliceProjection,
+    SliceProjectionError, export_plantuml_report, extract_graph_with_options, locate_project_from,
+    slice_by_pattern, slice_by_regex, slice_identity,
 };
 
-use super::{NegativeSliceConditionBuilder, SliceConfigurationError};
+use super::{
+    NegativeSliceConditionBuilder, PositiveSliceConditionBuilder, SliceConfigurationError,
+};
 
 /// Immutable scope describing how project files become named slices.
 #[derive(Debug, Clone)]
@@ -48,6 +53,45 @@ impl SliceScopeBuilder {
         NegativeSliceConditionBuilder::new(self)
     }
 
+    /// Enters the positive mood for PlantUML diagram adherence.
+    pub fn should(self) -> PositiveSliceConditionBuilder {
+        PositiveSliceConditionBuilder::new(self)
+    }
+
+    /// Extracts the project and renders its current slices as deterministic PlantUML.
+    pub fn to_plantuml(&self) -> Result<String, ArchUnitError> {
+        self.to_plantuml_with(&CheckOptions::default())
+    }
+
+    /// Renders PlantUML with explicit extraction options.
+    pub fn to_plantuml_with(&self, options: &CheckOptions) -> Result<String, ArchUnitError> {
+        self.validate_configuration()?;
+        let project = locate_project_from(self.project_locator())?;
+        let extraction = extract_graph_with_options(&project, options)?;
+        let graph = extraction.graph();
+        let edges = self.projection().project(graph);
+        let components = self.projection().slice_labels(graph);
+        PlantUmlRenderer::render_with_components(&edges, &components).map_err(|source| {
+            crate::UserError::with_source("the generated PlantUML diagram is invalid", source)
+                .into()
+        })
+    }
+
+    /// Extracts once and exports the current slices as UTF-8 PlantUML.
+    pub fn export_as_plantuml(&self, output_path: impl AsRef<Path>) -> Result<(), ArchUnitError> {
+        self.export_as_plantuml_with(output_path, &CheckOptions::default())
+    }
+
+    /// Exports PlantUML with explicit extraction options.
+    pub fn export_as_plantuml_with(
+        &self,
+        output_path: impl AsRef<Path>,
+        options: &CheckOptions,
+    ) -> Result<(), ArchUnitError> {
+        let content = self.to_plantuml_with(options)?;
+        export_plantuml_report(output_path, &content)
+    }
+
     /// Returns where Cargo project discovery begins.
     #[must_use]
     pub const fn project_locator(&self) -> &ProjectLocator {
@@ -62,6 +106,14 @@ impl SliceScopeBuilder {
 
     pub(super) const fn configuration_error(&self) -> Option<&SliceConfigurationError> {
         self.configuration_error.as_ref()
+    }
+
+    fn validate_configuration(&self) -> Result<(), ArchUnitError> {
+        if let Some(error) = self.configuration_error() {
+            Err(error.to_archunit_error())
+        } else {
+            Ok(())
+        }
     }
 
     fn set_projection(

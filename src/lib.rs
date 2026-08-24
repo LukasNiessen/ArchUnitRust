@@ -67,15 +67,21 @@ pub use layers::fluentapi::{
     project_layers, project_layers_in,
 };
 pub use slices::assertion::{
-    SliceDependencyRule, SliceDependencyViolation, gather_forbidden_slice_dependency_violations,
+    DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation,
+    gather_diagram_adherence_violations, gather_forbidden_slice_dependency_violations,
 };
 pub use slices::fluentapi::{
-    ForbiddenSliceDependencyCondition, NegativeSliceConditionBuilder, SliceScopeBuilder,
+    DiagramSliceCondition, DiagramSource, ForbiddenSliceDependencyCondition,
+    NegativeSliceConditionBuilder, PositiveSliceConditionBuilder, SliceScopeBuilder,
     project_slices, project_slices_in, slices, slices_in,
 };
 pub use slices::projection::{
     SliceProjection, SliceProjectionError, slice_by_file_suffix, slice_by_pattern, slice_by_regex,
     slice_identity,
+};
+pub use slices::uml::{
+    PlantUmlDependency, PlantUmlDiagram, PlantUmlError, PlantUmlParser, PlantUmlRenderer,
+    export_plantuml_report,
 };
 pub use testing::{
     ColorChoice, ColorUtils, ResultFactory, TestResult, TestResultOptions, TestViolation,
