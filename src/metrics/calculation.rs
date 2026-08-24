@@ -42,6 +42,21 @@ pub enum CountMetric {
 }
 
 impl CountMetric {
+    /// Every built-in count metric in stable report order.
+    pub const ALL: [Self; 11] = [
+        Self::MethodCount,
+        Self::FieldCount,
+        Self::LinesOfCode,
+        Self::Statements,
+        Self::Imports,
+        Self::ConcreteTypes,
+        Self::Functions,
+        Self::Traits,
+        Self::ImplBlocks,
+        Self::Macros,
+        Self::AssociatedFunctions,
+    ];
+
     /// Returns the stable public metric name.
     #[must_use]
     pub const fn name(self) -> &'static str {

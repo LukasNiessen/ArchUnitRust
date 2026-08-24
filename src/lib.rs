@@ -89,6 +89,9 @@ pub use metrics::fluentapi::{
     MetricSelection, MetricThresholdCondition, MetricZoneCondition, MetricsBuilder, metrics,
     metrics_in,
 };
+pub use metrics::reporting::{
+    DEFAULT_METRICS_CSS, MetricsExportOptions, MetricsExporter, MetricsReportData,
+};
 pub use slices::assertion::{
     DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation,
     gather_diagram_adherence_violations, gather_forbidden_slice_dependency_violations,
