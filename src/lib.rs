@@ -6,6 +6,7 @@ mod common;
 mod files;
 mod graph;
 mod layers;
+mod metrics;
 mod slices;
 mod testing;
 mod violation;
@@ -65,6 +66,14 @@ pub use layers::assertion::{
 pub use layers::fluentapi::{
     LayerDefinitionBuilder, LayerDependencyRuleBuilder, LayeredArchitecture, layers, layers_in,
     project_layers, project_layers_in,
+};
+pub use metrics::calculation::{CountMetric, MetricMeasurement, MetricSubject};
+pub use metrics::extraction::{
+    FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, MetricsExtractionError, ProjectMetricsInfo,
+    TypeInfo, TypeKind, extract_file_metrics, extract_project_metrics,
+};
+pub use metrics::fluentapi::{
+    CountMetricsBuilder, MetricSelection, MetricsBuilder, metrics, metrics_in,
 };
 pub use slices::assertion::{
     DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation,
