@@ -8,7 +8,7 @@ use crate::files::assertion::{
     FileDependencyViolation, FilePatternViolation,
 };
 use crate::layers::assertion::LayerDependencyViolation;
-use crate::metrics::assertion::MetricZoneViolation;
+use crate::metrics::assertion::{CustomMetricViolation, MetricZoneViolation};
 use crate::slices::assertion::SliceDependencyViolation;
 
 /// The machine-readable family of a [`Violation`].
@@ -35,6 +35,8 @@ pub enum ViolationKind {
     SliceDependency,
     /// A file component lies in a discouraged abstractness/instability zone.
     MetricZone,
+    /// A user-defined metric value did not satisfy its predicate.
+    CustomMetric,
 }
 
 impl ViolationKind {
@@ -51,6 +53,7 @@ impl ViolationKind {
             Self::LayerDependency => "layer-dependency",
             Self::SliceDependency => "slice-dependency",
             Self::MetricZone => "metric-zone",
+            Self::CustomMetric => "custom-metric",
         }
     }
 }
@@ -86,6 +89,8 @@ pub enum Violation {
     SliceDependency(SliceDependencyViolation),
     /// A file component lies inside a discouraged metrics zone.
     MetricZone(MetricZoneViolation),
+    /// A user-defined type metric did not satisfy its predicate.
+    CustomMetric(CustomMetricViolation),
 }
 
 impl Violation {
@@ -102,6 +107,7 @@ impl Violation {
             Self::LayerDependency(_) => ViolationKind::LayerDependency,
             Self::SliceDependency(_) => ViolationKind::SliceDependency,
             Self::MetricZone(_) => ViolationKind::MetricZone,
+            Self::CustomMetric(_) => ViolationKind::CustomMetric,
         }
     }
 
@@ -117,7 +123,8 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -133,7 +140,8 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -149,7 +157,8 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -165,7 +174,8 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -183,7 +193,8 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -199,7 +210,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -215,7 +227,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -231,7 +244,8 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_) => None,
         }
     }
 
@@ -247,7 +261,25 @@ impl Violation {
             | Self::ExternalModuleDependency(_)
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
-            | Self::SliceDependency(_) => None,
+            | Self::SliceDependency(_)
+            | Self::CustomMetric(_) => None,
+        }
+    }
+
+    /// Returns custom-metric data when a user predicate rejected a type value.
+    #[must_use]
+    pub const fn as_custom_metric(&self) -> Option<&CustomMetricViolation> {
+        match self {
+            Self::CustomMetric(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_)
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_) => None,
         }
     }
 }
@@ -303,6 +335,12 @@ impl From<SliceDependencyViolation> for Violation {
 impl From<MetricZoneViolation> for Violation {
     fn from(violation: MetricZoneViolation) -> Self {
         Self::MetricZone(violation)
+    }
+}
+
+impl From<CustomMetricViolation> for Violation {
+    fn from(violation: CustomMetricViolation) -> Self {
+        Self::CustomMetric(violation)
     }
 }
 
