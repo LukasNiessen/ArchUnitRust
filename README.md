@@ -595,5 +595,38 @@ The optional scope matches the written Rust path exactly or by `::` prefix. The 
 suppress separate qualified-path expressions, and ignored imports still establish aliases for
 resolving those expressions.
 
+## Executable self-architecture
+
+ArchUnitRust dogfoods its public API in [`tests/architecture.rs`](tests/architecture.rs). The suite
+keeps `common` limited to itself, the standard library, and the explicit Rust analysis toolchain;
+forbids dependencies between the `files`, `graph`, `layers`, `metrics`, and `slices` domains; and
+prevents implementation files from importing through `src/lib.rs`. `lib.rs` is therefore an
+outward-only facade, while each top-level internal module owns the imports used by its
+implementation.
+
+Rust module ownership creates structural edges that other languages do not have: a parent declares
+`mod child` and often `pub use`s the child's API. A child importing a sibling through its private
+parent facade is not an executable dependency cycle. Cycle rules can make that distinction without
+discarding parallel evidence:
+
+```rust,no_run
+use archunit::{ImportKind, assert_passes, project_files};
+
+let rule = project_files()
+    .in_path("src/files**")
+    .should()
+    .have_no_cycles()
+    .excluding_dependency_kinds([ImportKind::Mod, ImportKind::PubUse]);
+
+assert_passes!(rule);
+```
+
+If the same source-target pair also has a `Use`, `PathReference`, or other retained kind, it remains
+in the cycle graph with that evidence. The self-suite applies this rule independently to the
+top-level aggregation files and every architectural unit. This preserves the deliberate closed
+`Violation`/`Checkable` aggregation seam while still rejecting cycles inside any unit. See
+[ADR 0022](docs/adr/0022-enforce-rust-aware-self-architecture.md) for the dependency directions and
+trade-offs.
+
 Siblings: [ArchUnitTS](https://github.com/LukasNiessen/ArchUnitTS) ·
 [ArchUnitPython](https://github.com/LukasNiessen/ArchUnitPython)
