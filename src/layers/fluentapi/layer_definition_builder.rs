@@ -1,4 +1,4 @@
-use crate::{PatternError, RegexFactory};
+use crate::common::{PatternError, RegexFactory};
 
 use super::LayeredArchitecture;
 
@@ -19,13 +19,16 @@ impl LayerDefinitionBuilder {
     }
 
     /// Assigns files whose complete normalized path matches `pattern` to this layer.
-    pub fn defined_by(self, pattern: impl Into<crate::PatternSpec>) -> LayeredArchitecture {
+    pub fn defined_by(self, pattern: impl Into<crate::common::PatternSpec>) -> LayeredArchitecture {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.add_filter(filter, "path")
     }
 
     /// Assigns files whose containing directory matches `pattern` to this layer.
-    pub fn defined_by_folder(self, pattern: impl Into<crate::PatternSpec>) -> LayeredArchitecture {
+    pub fn defined_by_folder(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> LayeredArchitecture {
         let filter = RegexFactory::default().folder_matcher(pattern);
         self.add_filter(filter, "folder")
     }
@@ -43,7 +46,7 @@ impl LayerDefinitionBuilder {
 
     fn add_filter(
         self,
-        filter: Result<crate::Filter, PatternError>,
+        filter: Result<crate::common::Filter, PatternError>,
         selector_kind: &'static str,
     ) -> LayeredArchitecture {
         self.architecture

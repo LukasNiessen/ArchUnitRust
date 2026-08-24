@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::ProjectLocator;
+use crate::common::ProjectLocator;
 
 use super::LayeredArchitecture;
 

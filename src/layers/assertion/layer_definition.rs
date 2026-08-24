@@ -1,4 +1,4 @@
-use crate::Filter;
+use crate::common::Filter;
 
 /// A named architectural layer and the file selectors that define it.
 ///
@@ -32,7 +32,7 @@ impl LayerDefinition {
 
 #[cfg(test)]
 mod tests {
-    use crate::RegexFactory;
+    use crate::common::RegexFactory;
 
     use super::LayerDefinition;
 

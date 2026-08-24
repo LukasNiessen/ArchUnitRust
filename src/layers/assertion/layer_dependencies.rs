@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 use super::{LayerDefinition, LayerDependencyRule, LayerDependencyViolation};
 
@@ -69,7 +69,7 @@ fn violated_rule(
 mod tests {
     use std::collections::{BTreeMap, BTreeSet};
 
-    use crate::{Edge, ImportKind, ProjectedEdge, RegexFactory};
+    use crate::common::{Edge, ImportKind, ProjectedEdge, RegexFactory};
 
     use super::{LayerDefinition, LayerDependencyRule, gather_layer_dependency_violations};
 
