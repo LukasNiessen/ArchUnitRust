@@ -203,6 +203,57 @@ their crate name as the target slice, so a rule can explicitly forbid `("api", "
 definition that selects no internal files produces the universal empty-test violation unless
 `CheckOptions::with_allow_empty_tests(true)` is set.
 
+PlantUML component diagrams can act as a dependency allowlist. The supported subset is intentionally
+line-based: `component [Name]`, `[A] -> [B]`, `[A] --> [B]`, apostrophe or `//` comments, and
+`@startuml`/`@enduml` directives. Other styling lines are ignored.
+
+```rust,no_run
+use archunit::{ArchUnitError, Checkable, project_slices};
+
+fn check_diagram() -> Result<(), ArchUnitError> {
+    let diagram = r#"
+        @startuml
+        component [api]
+        component [application]
+        [api] --> [application]
+        @enduml
+    "#;
+    let rule = project_slices()
+        .defined_by("src/(**)/")
+        .should()
+        .ignoring_external_slices()
+        .ignoring_orphan_slices()
+        .adhere_to_diagram(diagram);
+
+    let _violations = rule.check()?;
+    Ok(())
+}
+```
+
+Strict adherence reports every actual projected dependency not drawn in the diagram.
+`ignoring_external_slices()` omits Cargo-module targets;
+`ignoring_orphan_slices()` omits dependencies whose source or target component is undeclared.
+`adhere_to_diagram_in_file(path)` reads UTF-8 only when the rule is checked.
+
+The reverse path renders the actual slice graph, including isolated selected slices, in stable
+sorted order:
+
+```rust,no_run
+use archunit::{ArchUnitError, project_slices};
+
+fn export_actual_diagram() -> Result<(), ArchUnitError> {
+    let slices = project_slices().defined_by("src/(**)/");
+    let text = slices.to_plantuml()?;
+    slices.export_as_plantuml("target/architecture/actual.puml")?;
+    assert!(text.starts_with("@startuml"));
+    Ok(())
+}
+```
+
+Use `to_plantuml_with` and `export_as_plantuml_with` for explicit `CheckOptions`. The lower-level
+`PlantUmlParser`, `PlantUmlDiagram`, `PlantUmlDependency`, and `PlantUmlRenderer` APIs work entirely
+on in-memory values.
+
 ## Dependency graph snapshots
 
 Graph reports first build one renderer-neutral snapshot. Every query modifier is immutable and lazy;
