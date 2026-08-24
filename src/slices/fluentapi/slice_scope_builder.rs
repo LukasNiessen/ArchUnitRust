@@ -29,13 +29,13 @@ impl SliceScopeBuilder {
     }
 
     /// Defines slice names through exactly one `(**)` path capture.
-    pub fn defined_by(mut self, pattern: impl AsRef<str>) -> Self {
+    pub fn defined_by(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
         self.set_projection(slice_by_pattern(pattern), "pattern");
         self
     }
 
     /// Defines slice names through the first capture in a Rust regular expression.
-    pub fn defined_by_regex(mut self, expression: impl AsRef<str>) -> Self {
+    pub fn defined_by_regex(mut self, expression: impl Into<crate::PatternSpec>) -> Self {
         self.set_projection(slice_by_regex(expression), "regular-expression");
         self
     }

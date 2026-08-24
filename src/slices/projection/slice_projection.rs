@@ -3,7 +3,10 @@ use std::{collections::BTreeSet, error::Error, fmt};
 use regex::Regex;
 
 use crate::common::extraction::normalize_identifier;
-use crate::{Edge, Graph, MappedEdge, ProjectedGraph, project_edges};
+use crate::{
+    Edge, Filter, Graph, MappedEdge, PatternSpec, PatternSyntax, PatternTarget, ProjectedGraph,
+    RegexFactory, RegexFactoryOptions, project_edges,
+};
 
 const SLICE_CAPTURE: &str = "(**)";
 
@@ -58,6 +61,7 @@ enum SliceLabeler {
 #[derive(Debug, Clone)]
 pub struct SliceProjection {
     labeler: SliceLabeler,
+    exclusions: Vec<Filter>,
 }
 
 impl SliceProjection {
@@ -66,6 +70,7 @@ impl SliceProjection {
     pub fn identity() -> Self {
         Self {
             labeler: SliceLabeler::Identity,
+            exclusions: Vec::new(),
         }
     }
 
@@ -74,6 +79,13 @@ impl SliceProjection {
     pub fn label_for(&self, path: &str) -> Option<String> {
         let path = normalize_identifier(path);
         if path.is_empty() {
+            return None;
+        }
+        if self
+            .exclusions
+            .iter()
+            .any(|exclusion| exclusion.matches(&path))
+        {
             return None;
         }
 
@@ -150,8 +162,11 @@ pub fn slice_identity() -> SliceProjection {
 }
 
 /// Captures a slice name through exactly one `(**)` placeholder in a portable path pattern.
-pub fn slice_by_pattern(pattern: impl AsRef<str>) -> Result<SliceProjection, SliceProjectionError> {
-    let original = pattern.as_ref();
+pub fn slice_by_pattern(
+    pattern: impl Into<PatternSpec>,
+) -> Result<SliceProjection, SliceProjectionError> {
+    let specification = pattern.into();
+    let original = specification.source();
     let pattern = original.trim().replace('\\', "/");
     let captures = pattern.match_indices(SLICE_CAPTURE).count();
     if captures != 1 {
@@ -172,15 +187,24 @@ pub fn slice_by_pattern(pattern: impl AsRef<str>) -> Result<SliceProjection, Sli
         glob_fragment(prefix),
         glob_fragment(suffix)
     );
-    projection_from_regex(original, &expression)
+    projection_from_regex(
+        original,
+        &expression,
+        compile_exclusions(&specification, PatternSyntax::Glob)?,
+    )
 }
 
 /// Captures a slice name through the first group in a Rust regular expression.
 pub fn slice_by_regex(
-    expression: impl AsRef<str>,
+    expression: impl Into<PatternSpec>,
 ) -> Result<SliceProjection, SliceProjectionError> {
-    let expression = expression.as_ref();
-    projection_from_regex(expression, expression)
+    let specification = expression.into();
+    let expression = specification.source();
+    projection_from_regex(
+        expression,
+        expression,
+        compile_exclusions(&specification, PatternSyntax::Regex)?,
+    )
 }
 
 /// Maps Rust filename stems to slices by their longest matching suffix.
@@ -225,12 +249,14 @@ where
     });
     Ok(SliceProjection {
         labeler: SliceLabeler::FileSuffix(labels),
+        exclusions: Vec::new(),
     })
 }
 
 fn projection_from_regex(
     input: &str,
     expression: &str,
+    exclusions: Vec<Filter>,
 ) -> Result<SliceProjection, SliceProjectionError> {
     if expression.trim().is_empty() {
         return Err(SliceProjectionError::new(
@@ -248,7 +274,27 @@ fn projection_from_regex(
     }
     Ok(SliceProjection {
         labeler: SliceLabeler::Regex(regex),
+        exclusions,
     })
+}
+
+fn compile_exclusions(
+    specification: &PatternSpec,
+    syntax: PatternSyntax,
+) -> Result<Vec<Filter>, SliceProjectionError> {
+    let factory = RegexFactory::new(RegexFactoryOptions::new().syntax(syntax));
+    specification
+        .exclusions()
+        .iter()
+        .map(|exclusion| {
+            factory
+                .compile(exclusion.source())
+                .map(|pattern| {
+                    Filter::new(pattern, exclusion.target().unwrap_or(PatternTarget::Path))
+                })
+                .map_err(|source| SliceProjectionError::new(source.pattern(), source.message()))
+        })
+        .collect()
 }
 
 fn glob_fragment(fragment: &str) -> String {
@@ -280,7 +326,7 @@ fn glob_fragment(fragment: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, ImportKind, MappedEdge};
+    use crate::{Edge, Graph, ImportKind, MappedEdge, pattern};
 
     use super::{slice_by_file_suffix, slice_by_pattern, slice_by_regex, slice_identity};
 
@@ -375,5 +421,46 @@ mod tests {
             Some(MappedEdge::new("src/a.rs", "serde"))
         );
         assert_eq!(projection.slice_labels(&graph), ["src/a.rs", "src/b.rs"]);
+    }
+
+    #[test]
+    fn capture_projections_exclude_paths_before_labeling_and_mapping() {
+        let pattern_projection = slice_by_pattern(
+            pattern("src/(**)/")
+                .except_in_folder("src/generated/**")
+                .except_with_name("mod.rs"),
+        )
+        .expect("fixture projection should compile");
+        let regex_projection = slice_by_regex(
+            pattern(r"\Asrc/([^/]+)/")
+                .except(r"\Asrc/generated/.*")
+                .except_with_name(r"mod\.rs"),
+        )
+        .expect("fixture projection should compile");
+
+        for projection in [pattern_projection, regex_projection] {
+            assert_eq!(
+                projection.label_for("src/domain/service.rs"),
+                Some("domain".to_owned())
+            );
+            assert_eq!(projection.label_for("src/generated/service.rs"), None);
+            assert_eq!(projection.label_for("src/domain/mod.rs"), None);
+            assert_eq!(
+                projection.map_edge(&edge(
+                    "src/domain/service.rs",
+                    "src/generated/model.rs",
+                    false
+                )),
+                None
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_capture_exclusion_reports_the_exclusion_input() {
+        let error = slice_by_pattern(pattern("src/(**)/").except("src/[generated"))
+            .expect_err("invalid exclusion should fail projection construction");
+
+        assert_eq!(error.input(), "src/[generated");
     }
 }
