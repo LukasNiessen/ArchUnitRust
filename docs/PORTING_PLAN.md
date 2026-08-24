@@ -189,11 +189,17 @@ LCOM is meaningful initially for structs with inherent methods. Field access is 
 `self.field` expressions. Traits, enums, unions, trait impls, generated methods, and macro-expanded
 field access are excluded from LCOM rather than assigned invented values.
 
-Package/module distance metrics adapt the shared formulas:
+Distance metrics initially use analyzed Rust source files as components. Package, crate, and inferred
+module aggregation remain future explicit projections because files are currently the dependency
+graph's only lossless evidence-carrying boundary. The shared formulas adapt as follows:
 
 - abstractness is traits divided by traits plus concrete types for the selected component;
 - instability is efferent coupling divided by total afferent and efferent coupling;
 - main-sequence distance, normalized distance, coupling factor, and zone checks use those values.
+
+Coupling is always calculated across the full project snapshot; fluent selectors narrow reported
+components without changing their topology. See ADR 0016 for formulas, denominator behavior, and
+strict zone boundaries.
 
 Custom metrics receive `TypeInfo`. All threshold verbs remain the shared six. Every metric documents
 its population and zero-denominator behavior with table-driven tests.

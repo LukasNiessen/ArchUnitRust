@@ -113,6 +113,49 @@ workspace-relative path, filename without extension, extension and containing di
 predicates are `Send + Sync + 'static`; captured configuration therefore needs owned,
 thread-safe values.
 
+## Rust-native metrics
+
+Metrics expose immutable measurements rather than architecture verdicts. Count and LCOM families
+use Rust vocabulary; component-distance metrics combine file syntax with the complete internal
+dependency graph:
+
+```rust,no_run
+use archunit::{ArchUnitError, metrics};
+
+fn inspect_metrics() -> Result<(), ArchUnitError> {
+    let measurements = metrics()
+        .in_folder("src/**")
+        .distance()
+        .instability()
+        .measure()?;
+
+    for measurement in measurements {
+        println!("{}: {:.3}", measurement.identifier(), measurement.value());
+    }
+    Ok(())
+}
+```
+
+In v0.1 one distance component is one analyzed Rust source file. Abstractness is the ratio of traits
+to all declared types; instability uses distinct incoming and outgoing internal file dependencies.
+The remaining terminals are `distance_from_main_sequence()`, `coupling_factor()`, and
+`normalized_distance()`. File and type selectors choose reported components but do not shrink the
+coupling universe.
+
+The two discouraged regions are executable architecture rules with typed violations and the shared
+strict empty-selection guard:
+
+```rust,no_run
+use archunit::{assert_passes, metrics};
+
+let rule = metrics()
+    .in_folder("src/**")
+    .distance()
+    .not_in_zone_of_pain();
+
+assert_passes!(rule);
+```
+
 ## Named layer policies
 
 Layers turn a set of file selectors into a compact dependency policy. The target list is a borrowed
