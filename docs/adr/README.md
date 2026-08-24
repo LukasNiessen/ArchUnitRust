@@ -18,3 +18,4 @@ rewriting history after released behavior depends on it.
 - [0012: Use typed projections for slice identity and evidence](0012-use-typed-projections-for-slice-identity-and-evidence.md)
 - [0013: Treat PlantUML as an allowlist and portable artifact](0013-treat-plantuml-as-an-allowlist-and-portable-artifact.md)
 - [0014: Extract truthful Rust metrics from syntax](0014-extract-truthful-rust-metrics-from-syntax.md)
+- [0015: Calculate LCOM only for inherent struct behavior](0015-calculate-lcom-for-inherent-struct-behavior.md)
