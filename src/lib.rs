@@ -67,7 +67,8 @@ pub use layers::fluentapi::{
     project_layers, project_layers_in,
 };
 pub use slices::assertion::{
-    SliceDependencyRule, SliceDependencyViolation, gather_forbidden_slice_dependency_violations,
+    DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation,
+    gather_diagram_adherence_violations, gather_forbidden_slice_dependency_violations,
 };
 pub use slices::fluentapi::{
     ForbiddenSliceDependencyCondition, NegativeSliceConditionBuilder, SliceScopeBuilder,

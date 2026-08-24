@@ -4,6 +4,8 @@
 pub enum SliceDependencyRule {
     /// A negated rule forbids one explicit source-to-target slice dependency.
     ContainDependency,
+    /// A positive rule permits only dependencies drawn in a component diagram.
+    AdhereToDiagram,
 }
 
 impl SliceDependencyRule {
@@ -12,6 +14,7 @@ impl SliceDependencyRule {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::ContainDependency => "contain_dependency",
+            Self::AdhereToDiagram => "adhere_to_diagram",
         }
     }
 }
