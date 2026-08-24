@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, Graph,
     MatchPatternFileConditionBuilder, PatternError, ProjectLocator, UserError,
@@ -42,31 +43,36 @@ impl CycleFreeFileCondition {
 
 impl Checkable for CycleFreeFileCondition {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        if let Some(error) = self.selector_error() {
-            return Err(ArchUnitError::from(UserError::with_source(
-                "the file scope contains an invalid selector",
-                error.clone(),
-            )));
-        }
+        execute_logged_check("files.no-cycles", options, |logger| {
+            if let Some(error) = self.selector_error() {
+                return Err(ArchUnitError::from(UserError::with_source(
+                    "the file scope contains an invalid selector",
+                    error.clone(),
+                )));
+            }
 
-        let project = locate_project_from(self.project_locator())?;
-        let extraction = extract_graph_with_options(&project, options)?;
-        let selected = selected_nodes(extraction.graph(), self.filters());
-        if let Some(violation) = empty_selection_violation(
-            &selected,
-            self.filters(),
-            self.condition.is_negated(),
-            options,
-        ) {
-            return Ok(vec![violation]);
-        }
+            logger.log_progress("extracting project graph")?;
+            let project = locate_project_from(self.project_locator())?;
+            let extraction = extract_graph_with_options(&project, options)?;
+            let selected = selected_nodes(extraction.graph(), self.filters());
+            logger.log_progress(format!("selected files={}", selected.len()))?;
+            if let Some(violation) = empty_selection_violation(
+                &selected,
+                self.filters(),
+                self.condition.is_negated(),
+                options,
+            ) {
+                return Ok(vec![violation]);
+            }
 
-        let labels = selected
-            .into_iter()
-            .map(|node| node.label)
-            .collect::<BTreeSet<_>>();
-        let cycles = cycles_within(extraction.graph(), &labels);
-        Ok(gather_cycle_violations(cycles))
+            let labels = selected
+                .into_iter()
+                .map(|node| node.label)
+                .collect::<BTreeSet<_>>();
+            let cycles = cycles_within(extraction.graph(), &labels);
+            logger.log_progress(format!("cycles={}", cycles.len()))?;
+            Ok(gather_cycle_violations(cycles))
+        })
     }
 }
 

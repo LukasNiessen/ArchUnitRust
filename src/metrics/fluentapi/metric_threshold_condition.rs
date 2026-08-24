@@ -1,10 +1,14 @@
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, MetricComparison,
     MetricMeasurement, UserError, Violation, gather_empty_test_violations,
     gather_metric_threshold_violations, validate_metric_threshold,
 };
 
-use super::{CustomMetricSelection, DistanceMetricSelection, LcomMetricSelection, MetricSelection};
+use super::{
+    CustomMetricSelection, DistanceMetricSelection, LcomMetricSelection, MetricSelection,
+    logging::log_measurements,
+};
 
 /// Executable exact numeric threshold over one selected metric.
 #[derive(Debug, Clone)]
@@ -51,16 +55,22 @@ macro_rules! impl_threshold_checkable {
     ($selection:ty) => {
         impl Checkable for MetricThresholdCondition<$selection> {
             fn check_with(&self, options: &CheckOptions) -> CheckResult {
-                self.selection.validate_configuration()?;
-                validate_metric_threshold(self.threshold).map_err(threshold_error)?;
-                finish_threshold_check(
-                    self.selection.measure_with(options)?,
-                    self.selection.filters(),
-                    self.selection.subject_label(),
-                    self.comparison,
-                    self.threshold,
-                    options,
-                )
+                execute_logged_check("metrics.threshold", options, |logger| {
+                    self.selection.validate_configuration()?;
+                    validate_metric_threshold(self.threshold).map_err(threshold_error)?;
+                    logger.log_progress("calculating metric values")?;
+                    let measurements = self.selection.measure_with(options)?;
+                    logger.log_progress(format!("measurements={}", measurements.len()))?;
+                    log_measurements(logger, &measurements, Some(self.threshold))?;
+                    finish_threshold_check(
+                        measurements,
+                        self.selection.filters(),
+                        self.selection.subject_label(),
+                        self.comparison,
+                        self.threshold,
+                        options,
+                    )
+                })
             }
         }
     };
@@ -75,16 +85,22 @@ where
     Calculation: Fn(&crate::TypeInfo) -> f64,
 {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        self.selection.validate_configuration()?;
-        validate_metric_threshold(self.threshold).map_err(threshold_error)?;
-        finish_threshold_check(
-            self.selection.measure_with(options)?,
-            self.selection.filters(),
-            self.selection.subject_label(),
-            self.comparison,
-            self.threshold,
-            options,
-        )
+        execute_logged_check("metrics.threshold", options, |logger| {
+            self.selection.validate_configuration()?;
+            validate_metric_threshold(self.threshold).map_err(threshold_error)?;
+            logger.log_progress("calculating custom metric values")?;
+            let measurements = self.selection.measure_with(options)?;
+            logger.log_progress(format!("measurements={}", measurements.len()))?;
+            log_measurements(logger, &measurements, Some(self.threshold))?;
+            finish_threshold_check(
+                measurements,
+                self.selection.filters(),
+                self.selection.subject_label(),
+                self.comparison,
+                self.threshold,
+                options,
+            )
+        })
     }
 }
 

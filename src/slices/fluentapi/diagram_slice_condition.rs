@@ -1,3 +1,4 @@
+use crate::checkable::execute_logged_check;
 use crate::{
     ArchUnitError, CheckOptions, CheckResult, Checkable, DiagramAdherenceOptions, PlantUmlParser,
     ProjectLocator, SliceProjection, UserError, Violation, extract_graph_with_options,
@@ -70,39 +71,45 @@ impl DiagramSliceCondition {
 
 impl Checkable for DiagramSliceCondition {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        if let Some(error) = self.first_configuration_error() {
-            return Err(error.to_archunit_error());
-        }
+        execute_logged_check("slices.diagram-adherence", options, |logger| {
+            if let Some(error) = self.first_configuration_error() {
+                return Err(error.to_archunit_error());
+            }
 
-        let project = locate_project_from(self.project_locator())?;
-        let extraction = extract_graph_with_options(&project, options)?;
-        let graph = extraction.graph();
-        let labels = self.projection().slice_labels(graph);
-        let empty = gather_empty_test_violations(
-            &labels,
-            "slices",
-            &[],
-            false,
-            options.allows_empty_tests(),
-        );
-        if let Some(violation) = empty.into_iter().next() {
-            return Ok(vec![Violation::from(violation)]);
-        }
+            logger.log_progress("extracting project graph")?;
+            let project = locate_project_from(self.project_locator())?;
+            let extraction = extract_graph_with_options(&project, options)?;
+            let graph = extraction.graph();
+            let labels = self.projection().slice_labels(graph);
+            logger.log_progress(format!("selected slices={}", labels.len()))?;
+            let empty = gather_empty_test_violations(
+                &labels,
+                "slices",
+                &[],
+                false,
+                options.allows_empty_tests(),
+            );
+            if let Some(violation) = empty.into_iter().next() {
+                return Ok(vec![Violation::from(violation)]);
+            }
 
-        let text = self.diagram_source.read()?;
-        let diagram = PlantUmlParser::parse(&text).map_err(|source| {
-            ArchUnitError::from(UserError::with_source(
-                "the PlantUML architecture diagram is invalid",
-                source,
-            ))
-        })?;
-        let projected = self.projection().project(graph);
-        Ok(
-            gather_diagram_adherence_violations(&projected, &diagram, self.options())
-                .into_iter()
-                .map(Violation::from)
-                .collect(),
-        )
+            logger.log_progress("reading PlantUML diagram")?;
+            let text = self.diagram_source.read()?;
+            let diagram = PlantUmlParser::parse(&text).map_err(|source| {
+                ArchUnitError::from(UserError::with_source(
+                    "the PlantUML architecture diagram is invalid",
+                    source,
+                ))
+            })?;
+            let projected = self.projection().project(graph);
+            logger.log_progress(format!("projected dependencies={}", projected.len()))?;
+            Ok(
+                gather_diagram_adherence_violations(&projected, &diagram, self.options())
+                    .into_iter()
+                    .map(Violation::from)
+                    .collect(),
+            )
+        })
     }
 }
 

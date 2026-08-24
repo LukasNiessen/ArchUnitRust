@@ -1,9 +1,12 @@
+use crate::checkable::execute_logged_check;
 use crate::{
     CheckOptions, CheckResult, Checkable, Filter, MetricMeasurement, MetricSubject, Violation,
     gather_empty_test_violations, gather_metric_predicate_violations,
 };
 
-use super::{DistanceMetricSelection, LcomMetricSelection, MetricSelection};
+use super::{
+    DistanceMetricSelection, LcomMetricSelection, MetricSelection, logging::log_measurements,
+};
 
 /// Executable arbitrary predicate over one selected built-in metric.
 #[derive(Debug, Clone)]
@@ -35,14 +38,20 @@ macro_rules! impl_predicate_checkable {
             Predicate: Fn(f64, &MetricSubject) -> bool,
         {
             fn check_with(&self, options: &CheckOptions) -> CheckResult {
-                self.selection.validate_configuration()?;
-                finish_predicate_check(
-                    self.selection.measure_with(options)?,
-                    self.selection.filters(),
-                    self.selection.subject_label(),
-                    &self.predicate,
-                    options,
-                )
+                execute_logged_check("metrics.predicate", options, |logger| {
+                    self.selection.validate_configuration()?;
+                    logger.log_progress("calculating metric values")?;
+                    let measurements = self.selection.measure_with(options)?;
+                    logger.log_progress(format!("measurements={}", measurements.len()))?;
+                    log_measurements(logger, &measurements, None)?;
+                    finish_predicate_check(
+                        measurements,
+                        self.selection.filters(),
+                        self.selection.subject_label(),
+                        &self.predicate,
+                        options,
+                    )
+                })
             }
         }
     };

@@ -1,5 +1,6 @@
+use crate::checkable::execute_logged_check;
 use crate::{
-    CheckOptions, CheckResult, Checkable, TypeInfo, Violation, gather_custom_metric_violations,
+    CheckOptions, CheckResult, Checkable, CustomMetricViolation, TypeInfo, Violation,
     gather_empty_test_violations,
 };
 
@@ -46,27 +47,35 @@ where
     Predicate: Fn(f64, &TypeInfo) -> bool,
 {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
-        let types = self.selection.selected_types_with(options)?;
-        let empty = gather_empty_test_violations(
-            &types,
-            "metric types",
-            self.selection.filters(),
-            false,
-            options.allows_empty_tests(),
-        );
-        if let Some(violation) = empty.into_iter().next() {
-            return Ok(vec![Violation::from(violation)]);
-        }
+        execute_logged_check("metrics.custom-predicate", options, |logger| {
+            logger.log_progress("selecting custom metric types")?;
+            let types = self.selection.selected_types_with(options)?;
+            logger.log_progress(format!("metric types={}", types.len()))?;
+            let empty = gather_empty_test_violations(
+                &types,
+                "metric types",
+                self.selection.filters(),
+                false,
+                options.allows_empty_tests(),
+            );
+            if let Some(violation) = empty.into_iter().next() {
+                return Ok(vec![Violation::from(violation)]);
+            }
 
-        Ok(gather_custom_metric_violations(
-            &types,
-            self.selection.name(),
-            self.selection.description(),
-            self.selection.calculation(),
-            &self.predicate,
-        )
-        .into_iter()
-        .map(Violation::from)
-        .collect())
+            let mut violations = Vec::new();
+            for type_info in &types {
+                let value = (self.selection.calculation())(type_info);
+                logger.log_metric(self.selection.name(), type_info.name(), value, None)?;
+                if !(self.predicate)(value, type_info) {
+                    violations.push(Violation::from(CustomMetricViolation::new(
+                        type_info.clone(),
+                        self.selection.name(),
+                        self.selection.description(),
+                        value,
+                    )));
+                }
+            }
+            Ok(violations)
+        })
     }
 }
