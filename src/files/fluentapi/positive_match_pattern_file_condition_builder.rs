@@ -1,4 +1,7 @@
-use crate::{FileInfo, Filter, PatternError, ProjectLocator};
+use crate::{
+    common::{Filter, PatternError, ProjectLocator},
+    files::FileInfo,
+};
 
 use super::{
     CustomFileCondition, CycleFreeFileCondition, DependOnExternalModuleConditionBuilder,
@@ -60,17 +63,26 @@ impl PositiveMatchPatternFileConditionBuilder {
     }
 
     /// Requires every selected file's final path segment to match `pattern`.
-    pub fn have_name(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
+    pub fn have_name(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> MatchPatternFileCondition {
         self.condition.have_name(pattern)
     }
 
     /// Requires every selected file's containing folder to match `pattern`.
-    pub fn be_in_folder(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
+    pub fn be_in_folder(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> MatchPatternFileCondition {
         self.condition.be_in_folder(pattern)
     }
 
     /// Requires every selected file's complete normalized path to match `pattern`.
-    pub fn be_in_path(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
+    pub fn be_in_path(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> MatchPatternFileCondition {
         self.condition.be_in_path(pattern)
     }
 

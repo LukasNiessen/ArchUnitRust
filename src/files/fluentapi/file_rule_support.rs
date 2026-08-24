@@ -1,6 +1,8 @@
 use crate::{
-    CheckOptions, Filter, Graph, ProjectedNode, Violation, gather_empty_test_violations,
-    project_to_nodes,
+    common::{
+        CheckOptions, Filter, Graph, ProjectedNode, gather_empty_test_violations, project_to_nodes,
+    },
+    violation::Violation,
 };
 
 pub(super) fn selected_nodes(graph: &Graph, filters: &[Filter]) -> Vec<ProjectedNode> {
@@ -30,7 +32,7 @@ pub(super) fn empty_selection_violation(
 
 #[cfg(test)]
 mod tests {
-    use crate::{CheckOptions, Edge, Graph, RegexFactory};
+    use crate::common::{CheckOptions, Edge, Graph, RegexFactory};
 
     use super::{empty_selection_violation, selected_nodes};
 

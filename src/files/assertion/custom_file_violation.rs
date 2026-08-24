@@ -1,4 +1,4 @@
-use crate::FileInfo;
+use crate::files::FileInfo;
 
 /// One selected file that disagrees with a user-defined predicate.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,7 +27,7 @@ impl CustomFileViolation {
 #[cfg(test)]
 mod tests {
     use super::CustomFileViolation;
-    use crate::FileInfo;
+    use crate::files::FileInfo;
 
     #[test]
     fn retains_file_requirement_and_mood_as_data() {

@@ -1,4 +1,4 @@
-use crate::{FileInfo, Violation};
+use crate::{files::FileInfo, violation::Violation};
 
 use super::CustomFileViolation;
 
@@ -32,7 +32,7 @@ where
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::{FileInfo, ViolationKind};
+    use crate::{files::FileInfo, violation::ViolationKind};
 
     use super::gather_custom_file_violations;
 

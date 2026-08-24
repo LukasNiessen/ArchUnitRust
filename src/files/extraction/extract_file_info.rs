@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::{ArchUnitError, CargoProject, TechnicalError};
+use crate::common::{ArchUnitError, CargoProject, TechnicalError};
 
 use super::FileInfo;
 

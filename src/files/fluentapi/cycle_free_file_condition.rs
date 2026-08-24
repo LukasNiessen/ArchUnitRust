@@ -2,10 +2,13 @@ use std::collections::BTreeSet;
 
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, Graph,
-    MatchPatternFileConditionBuilder, PatternError, ProjectLocator, UserError,
-    extract_graph_with_options, gather_cycle_violations, locate_project_from, per_internal_edge,
-    project_cycles, project_edges,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, Filter, Graph, PatternError, ProjectLocator, UserError,
+        extract_graph_with_options, locate_project_from, per_internal_edge, project_cycles,
+        project_edges,
+    },
+    files::{MatchPatternFileConditionBuilder, gather_cycle_violations},
 };
 
 use super::file_rule_support::{empty_selection_violation, selected_nodes};
@@ -76,7 +79,7 @@ impl Checkable for CycleFreeFileCondition {
     }
 }
 
-fn cycles_within(graph: &Graph, selected: &BTreeSet<String>) -> crate::ProjectedCycles {
+fn cycles_within(graph: &Graph, selected: &BTreeSet<String>) -> crate::common::ProjectedCycles {
     let edges = project_edges(graph, per_internal_edge())
         .into_iter()
         .filter(|edge| {
@@ -90,7 +93,7 @@ fn cycles_within(graph: &Graph, selected: &BTreeSet<String>) -> crate::Projected
 mod tests {
     use std::collections::BTreeSet;
 
-    use crate::{Edge, Graph, ImportKind};
+    use crate::common::{Edge, Graph, ImportKind};
 
     use super::cycles_within;
 

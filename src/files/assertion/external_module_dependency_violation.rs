@@ -1,4 +1,4 @@
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 /// One external crate dependency that disagrees with a file rule.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,7 +23,7 @@ impl ExternalModuleDependencyViolation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::ExternalModuleDependencyViolation;
 

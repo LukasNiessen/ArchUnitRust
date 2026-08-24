@@ -1,4 +1,4 @@
-use crate::{CycleViolation, ProjectedCycles, Violation};
+use crate::{common::ProjectedCycles, files::CycleViolation, violation::Violation};
 
 /// Converts every projected cycle into machine-readable violation data.
 #[must_use]
@@ -12,7 +12,10 @@ pub fn gather_cycle_violations(cycles: ProjectedCycles) -> Vec<Violation> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge, ViolationKind};
+    use crate::{
+        common::{Edge, ImportKind, ProjectedEdge},
+        violation::ViolationKind,
+    };
 
     use super::gather_cycle_violations;
 

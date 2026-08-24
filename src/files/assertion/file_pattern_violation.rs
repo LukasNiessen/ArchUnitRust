@@ -1,4 +1,4 @@
-use crate::{Filter, ProjectedNode};
+use crate::common::{Filter, ProjectedNode};
 
 /// One selected file that disagrees with a name or location predicate.
 ///
@@ -33,13 +33,13 @@ impl FilePatternViolation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Graph, PatternTarget, RegexFactory, project_to_nodes};
+    use crate::common::{Graph, PatternTarget, RegexFactory, project_to_nodes};
 
     use super::FilePatternViolation;
 
     #[test]
     fn retains_the_requirement_file_evidence_and_mood() {
-        let node = project_to_nodes(&Graph::from_edges([crate::Edge::self_edge(
+        let node = project_to_nodes(&Graph::from_edges([crate::common::Edge::self_edge(
             "src/order_service.rs",
         )]))
         .into_iter()

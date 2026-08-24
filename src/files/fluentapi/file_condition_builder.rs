@@ -1,4 +1,4 @@
-use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
+use crate::common::{Filter, PatternError, ProjectLocator, RegexFactory};
 
 use super::{NegatedMatchPatternFileConditionBuilder, PositiveMatchPatternFileConditionBuilder};
 
@@ -26,25 +26,25 @@ impl FileConditionBuilder {
     }
 
     /// Selects files whose final path segment matches `pattern`.
-    pub fn with_name(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn with_name(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().filename_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Selects files whose containing directory matches `pattern`.
-    pub fn in_folder(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_folder(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().folder_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Selects files whose complete normalized path matches `pattern`.
-    pub fn in_path(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_path(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Selects exactly one normalized file path, treating metacharacters literally.
-    pub fn in_file(self, path: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_file(self, path: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().exact_file_matcher(path);
         self.with_filter(filter)
     }
@@ -96,7 +96,10 @@ impl FileConditionBuilder {
 mod tests {
     use std::path::Path;
 
-    use crate::{PatternTarget, files, project_files, project_files_in};
+    use crate::{
+        common::PatternTarget,
+        files::{files, project_files, project_files_in},
+    };
 
     fn matches(identifier: &str, builder: &super::FileConditionBuilder) -> bool {
         builder.selector_error().is_none()

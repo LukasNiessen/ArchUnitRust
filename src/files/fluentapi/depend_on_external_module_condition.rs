@@ -1,9 +1,11 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, PatternError, ProjectLocator,
-    RegexFactory, UserError, extract_graph_with_options,
-    gather_external_module_dependency_violations, locate_project_from, per_external_edge,
-    project_edges,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, Filter, PatternError, ProjectLocator, RegexFactory, UserError,
+        extract_graph_with_options, locate_project_from, per_external_edge, project_edges,
+    },
+    files::gather_external_module_dependency_violations,
 };
 
 use super::{
@@ -76,7 +78,7 @@ impl DependOnExternalModuleCondition {
     }
 
     /// Adds another external crate pattern using OR semantics.
-    pub fn matching(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn matching(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.with_filter(filter)
     }
@@ -139,7 +141,7 @@ impl Checkable for DependOnExternalModuleCondition {
 
 #[cfg(test)]
 mod tests {
-    use crate::project_files_in;
+    use crate::files::project_files_in;
 
     #[test]
     fn matching_selectors_chain_immutably_with_or_semantics() {

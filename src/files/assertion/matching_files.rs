@@ -1,4 +1,7 @@
-use crate::{Filter, ProjectedNode, Violation};
+use crate::{
+    common::{Filter, ProjectedNode},
+    violation::Violation,
+};
 
 use super::FilePatternViolation;
 
@@ -24,11 +27,14 @@ pub fn gather_matching_file_violations(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, PatternTarget, RegexFactory, ViolationKind, project_to_nodes};
+    use crate::{
+        common::{Edge, Graph, PatternTarget, RegexFactory, project_to_nodes},
+        violation::ViolationKind,
+    };
 
     use super::gather_matching_file_violations;
 
-    fn nodes() -> Vec<crate::ProjectedNode> {
+    fn nodes() -> Vec<crate::common::ProjectedNode> {
         project_to_nodes(&Graph::from_edges([
             Edge::self_edge("src/orders/order_service.rs"),
             Edge::self_edge("src/orders/order_repository.rs"),
