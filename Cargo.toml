@@ -10,6 +10,7 @@ license = "MIT"
 readme = "README.md"
 keywords = ["architecture", "testing", "dependencies", "static-analysis"]
 categories = ["development-tools::testing"]
+exclude = ["docs/assets/og.png"]
 
 [lib]
 path = "src/lib.rs"
