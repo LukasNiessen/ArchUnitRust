@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, VecDeque};
 
-use crate::{Edge, Filter};
+use crate::common::{Edge, Filter};
 
 use super::GraphQueryOptions;
 
@@ -110,7 +110,10 @@ fn next_nodes(edges: &[Edge], node: &str, direction: Direction) -> BTreeSet<Stri
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, GraphQueryOptions, RegexFactory};
+    use crate::{
+        common::{Edge, RegexFactory},
+        graph::GraphQueryOptions,
+    };
 
     use super::select_graph_nodes;
 
@@ -125,7 +128,7 @@ mod tests {
         ]
     }
 
-    fn filter(path: &str) -> crate::Filter {
+    fn filter(path: &str) -> crate::common::Filter {
         RegexFactory::default()
             .path_matcher(path)
             .expect("fixture selector should compile")

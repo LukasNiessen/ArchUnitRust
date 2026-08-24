@@ -1,4 +1,4 @@
-use crate::{MetricMeasurement, MetricSubject};
+use crate::metrics::{MetricMeasurement, MetricSubject};
 
 /// One built-in metric value that did not satisfy a user predicate.
 #[derive(Debug, Clone, PartialEq)]
@@ -61,7 +61,7 @@ where
 mod tests {
     use std::cell::Cell;
 
-    use crate::{MetricMeasurement, MetricSubject, extract_file_metrics};
+    use crate::metrics::{MetricMeasurement, MetricSubject, extract_file_metrics};
 
     use super::gather_metric_predicate_violations;
 

@@ -1,4 +1,4 @@
-use crate::LogLevel;
+use crate::common::LogLevel;
 
 /// Stable vocabulary for records emitted during architecture checks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -91,7 +91,7 @@ fn sanitize_message(message: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{LogEventKind, LogRecord};
-    use crate::LogLevel;
+    use crate::common::LogLevel;
 
     #[test]
     fn records_use_the_fixed_vocabulary_and_remain_one_line() {

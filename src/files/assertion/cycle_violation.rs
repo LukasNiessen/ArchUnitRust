@@ -1,4 +1,4 @@
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 /// One closed circular path through a projected dependency graph.
 ///
@@ -29,7 +29,7 @@ impl CycleViolation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::CycleViolation;
 

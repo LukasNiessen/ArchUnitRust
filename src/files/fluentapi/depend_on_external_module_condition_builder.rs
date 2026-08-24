@@ -1,4 +1,4 @@
-use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
+use crate::common::{Filter, PatternError, ProjectLocator, RegexFactory};
 
 use super::{DependOnExternalModuleCondition, MatchPatternFileConditionBuilder};
 
@@ -46,7 +46,7 @@ impl DependOnExternalModuleConditionBuilder {
     /// Selects external crate names matching `pattern`.
     pub fn matching(
         self,
-        pattern: impl Into<crate::PatternSpec>,
+        pattern: impl Into<crate::common::PatternSpec>,
     ) -> DependOnExternalModuleCondition {
         let filter = RegexFactory::default().path_matcher(pattern);
         DependOnExternalModuleCondition::new(self, filter)
@@ -55,7 +55,7 @@ impl DependOnExternalModuleConditionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{PatternTarget, project_files_in};
+    use crate::{common::PatternTarget, files::project_files_in};
 
     #[test]
     fn enters_the_module_selector_with_the_subject_mood_intact() {

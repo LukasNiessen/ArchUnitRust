@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use crate::{ArchUnitError, TechnicalError, UserError};
+use crate::common::{ArchUnitError, TechnicalError, UserError};
 
 /// Writes a rendered graph report as UTF-8, creating missing parent directories.
 pub fn export_graph_report(
@@ -40,7 +40,7 @@ pub fn export_graph_report(
 mod tests {
     use std::{fs, path::Path, time::SystemTime};
 
-    use crate::ArchUnitError;
+    use crate::common::ArchUnitError;
 
     use super::export_graph_report;
 

@@ -125,7 +125,7 @@ mod tests {
     use syn::Item;
 
     use super::references_in_item;
-    use crate::ImportKind;
+    use crate::common::ImportKind;
 
     #[test]
     fn visits_qualified_paths_in_signatures_bodies_patterns_impls_and_attributes() {

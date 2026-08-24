@@ -2,10 +2,14 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, LayerDefinition, PatternError,
-    ProjectLocator, UserError, Violation, extract_graph_with_options, gather_empty_test_violations,
-    gather_layer_dependency_violations, locate_project_from, per_internal_edge, project_edges,
-    project_to_nodes,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, PatternError, ProjectLocator, UserError,
+        extract_graph_with_options, gather_empty_test_violations, locate_project_from,
+        per_internal_edge, project_edges, project_to_nodes,
+    },
+    layers::{LayerDefinition, gather_layer_dependency_violations},
+    violation::Violation,
 };
 
 use super::{LayerDefinitionBuilder, LayerDependencyRuleBuilder};
@@ -125,7 +129,7 @@ impl LayeredArchitecture {
     pub(super) fn with_layer_filter(
         mut self,
         layer_name: String,
-        filter: Result<crate::Filter, PatternError>,
+        filter: Result<crate::common::Filter, PatternError>,
         selector_kind: &'static str,
     ) -> Self {
         if self.configuration_error.is_some() {
@@ -296,7 +300,11 @@ impl Checkable for LayeredArchitecture {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ArchUnitError, Checkable, PatternTarget, layers, layers_in};
+    use crate::{
+        checkable::Checkable,
+        common::{ArchUnitError, PatternTarget},
+        layers::{layers, layers_in},
+    };
 
     #[test]
     fn definitions_are_branchable_and_repeated_names_add_or_selectors() {

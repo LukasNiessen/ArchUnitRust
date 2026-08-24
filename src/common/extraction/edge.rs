@@ -82,7 +82,7 @@ impl fmt::Display for Edge {
 #[cfg(test)]
 mod tests {
     use super::Edge;
-    use crate::ImportKind;
+    use crate::common::ImportKind;
 
     #[test]
     fn normalizes_internal_file_identifiers() {

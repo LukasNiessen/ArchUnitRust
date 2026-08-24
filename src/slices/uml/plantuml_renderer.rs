@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, fs, path::Path};
 
-use crate::{ArchUnitError, ProjectedEdge, TechnicalError, UserError};
+use crate::common::{ArchUnitError, ProjectedEdge, TechnicalError, UserError};
 
 use super::PlantUmlError;
 use super::plantuml_dependency::validated_component_name;
@@ -137,7 +137,7 @@ fn invalid_diagram(error: PlantUmlError) -> ArchUnitError {
 mod tests {
     use std::{fs, time::SystemTime};
 
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::PlantUmlRenderer;
 

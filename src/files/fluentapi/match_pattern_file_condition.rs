@@ -1,8 +1,11 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, MatchPatternFileConditionBuilder,
-    PatternError, ProjectLocator, UserError, extract_graph_with_options,
-    gather_matching_file_violations, locate_project_from,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, Filter, PatternError, ProjectLocator, UserError,
+        extract_graph_with_options, locate_project_from,
+    },
+    files::{MatchPatternFileConditionBuilder, gather_matching_file_violations},
 };
 
 use super::file_rule_support::{empty_selection_violation, selected_nodes};

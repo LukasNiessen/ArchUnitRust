@@ -1,8 +1,12 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    CheckOptions, CheckResult, Checkable, ProjectLocator, SliceProjection, Violation,
-    extract_graph_with_options, gather_empty_test_violations,
-    gather_forbidden_slice_dependency_violations, locate_project_from,
+    checkable::{CheckResult, Checkable},
+    common::{
+        CheckOptions, ProjectLocator, extract_graph_with_options, gather_empty_test_violations,
+        locate_project_from,
+    },
+    slices::{SliceProjection, gather_forbidden_slice_dependency_violations},
+    violation::Violation,
 };
 
 use super::{SliceConfigurationError, SliceScopeBuilder};
@@ -115,7 +119,7 @@ impl Checkable for ForbiddenSliceDependencyCondition {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ArchUnitError, Checkable, project_slices_in};
+    use crate::{checkable::Checkable, common::ArchUnitError, slices::project_slices_in};
 
     #[test]
     fn first_projection_error_precedes_rule_names_and_project_discovery() {

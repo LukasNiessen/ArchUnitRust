@@ -1,8 +1,12 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, MetricComparison,
-    MetricMeasurement, UserError, Violation, gather_empty_test_violations,
-    gather_metric_threshold_violations, validate_metric_threshold,
+    checkable::{CheckResult, Checkable},
+    common::{ArchUnitError, CheckOptions, Filter, UserError, gather_empty_test_violations},
+    metrics::{
+        MetricComparison, MetricMeasurement, gather_metric_threshold_violations,
+        validate_metric_threshold,
+    },
+    violation::Violation,
 };
 
 use super::{
@@ -82,7 +86,7 @@ impl_threshold_checkable!(DistanceMetricSelection);
 
 impl<Calculation> Checkable for MetricThresholdCondition<CustomMetricSelection<Calculation>>
 where
-    Calculation: Fn(&crate::TypeInfo) -> f64,
+    Calculation: Fn(&crate::metrics::TypeInfo) -> f64,
 {
     fn check_with(&self, options: &CheckOptions) -> CheckResult {
         execute_logged_check("metrics.threshold", options, |logger| {
@@ -132,7 +136,7 @@ fn finish_threshold_check(
     )
 }
 
-fn threshold_error(error: crate::MetricThresholdError) -> ArchUnitError {
+fn threshold_error(error: crate::metrics::MetricThresholdError) -> ArchUnitError {
     ArchUnitError::from(UserError::with_source(
         "the metric threshold is invalid",
         error,

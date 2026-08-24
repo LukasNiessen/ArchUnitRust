@@ -1,4 +1,4 @@
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 use super::LayerDependencyRule;
 
@@ -36,7 +36,7 @@ impl LayerDependencyViolation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::{LayerDependencyRule, LayerDependencyViolation};
 

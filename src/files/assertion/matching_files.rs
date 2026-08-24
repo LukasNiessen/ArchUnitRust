@@ -1,4 +1,7 @@
-use crate::{Filter, ProjectedNode, Violation};
+use crate::{
+    common::{Filter, ProjectedNode},
+    violation::Violation,
+};
 
 use super::FilePatternViolation;
 
@@ -24,11 +27,14 @@ pub fn gather_matching_file_violations(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, PatternTarget, RegexFactory, ViolationKind, project_to_nodes};
+    use crate::{
+        common::{Edge, Graph, PatternTarget, RegexFactory, project_to_nodes},
+        violation::ViolationKind,
+    };
 
     use super::gather_matching_file_violations;
 
-    fn nodes() -> Vec<crate::ProjectedNode> {
+    fn nodes() -> Vec<crate::common::ProjectedNode> {
         project_to_nodes(&Graph::from_edges([
             Edge::self_edge("src/orders/order_service.rs"),
             Edge::self_edge("src/orders/order_repository.rs"),
@@ -45,7 +51,7 @@ mod tests {
         let violations = gather_matching_file_violations(&nodes(), &filter, false);
         let labels = violations
             .iter()
-            .filter_map(crate::Violation::as_file_pattern)
+            .filter_map(crate::violation::Violation::as_file_pattern)
             .map(|violation| violation.projected_node.label.as_str())
             .collect::<Vec<_>>();
 
@@ -72,7 +78,7 @@ mod tests {
         let violations = gather_matching_file_violations(&nodes(), &filter, true);
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_file_pattern)
+            .filter_map(crate::violation::Violation::as_file_pattern)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 2);

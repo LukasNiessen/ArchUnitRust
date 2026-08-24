@@ -1,4 +1,4 @@
-use crate::ProjectedEdge;
+use crate::common::ProjectedEdge;
 
 /// One internal file dependency that disagrees with a relational rule.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,7 +23,7 @@ impl FileDependencyViolation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge};
+    use crate::common::{Edge, ImportKind, ProjectedEdge};
 
     use super::FileDependencyViolation;
 

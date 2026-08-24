@@ -1,4 +1,7 @@
-use crate::{Filter, ProjectedEdge, Violation};
+use crate::{
+    common::{Filter, ProjectedEdge},
+    violation::Violation,
+};
 
 use super::FileDependencyViolation;
 
@@ -35,7 +38,10 @@ fn matches_all(identifier: &str, filters: &[Filter]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, PatternTarget, ProjectedEdge, RegexFactory, ViolationKind};
+    use crate::{
+        common::{Edge, ImportKind, PatternTarget, ProjectedEdge, RegexFactory},
+        violation::ViolationKind,
+    };
 
     use super::gather_file_dependency_violations;
 
@@ -55,7 +61,7 @@ mod tests {
         ]
     }
 
-    fn subject_filters() -> Vec<crate::Filter> {
+    fn subject_filters() -> Vec<crate::common::Filter> {
         vec![
             RegexFactory::default()
                 .filename_matcher("controller.rs")
@@ -63,7 +69,7 @@ mod tests {
         ]
     }
 
-    fn service_filters() -> Vec<crate::Filter> {
+    fn service_filters() -> Vec<crate::common::Filter> {
         vec![
             RegexFactory::default()
                 .folder_matcher("src/service")
@@ -84,7 +90,7 @@ mod tests {
         );
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_file_dependency)
+            .filter_map(crate::violation::Violation::as_file_dependency)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 1);
@@ -104,7 +110,7 @@ mod tests {
         );
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_file_dependency)
+            .filter_map(crate::violation::Violation::as_file_dependency)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 1);

@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, fmt};
 
-use crate::{MetricMeasurement, MetricSubject, ProjectMetricsInfo, TypeInfo, TypeKind};
+use crate::metrics::{MetricMeasurement, MetricSubject, ProjectMetricsInfo, TypeInfo, TypeKind};
 
 /// Immutable method/field incidence data used by every LCOM formula.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -264,7 +264,7 @@ fn fields_overlap(left: &BTreeSet<String>, right: &BTreeSet<String>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{LcomInput, LcomMetric};
-    use crate::extract_file_metrics;
+    use crate::metrics::extract_file_metrics;
 
     fn input(fields: &[&str], methods: &[&[&str]]) -> LcomInput {
         LcomInput::new(

@@ -1,4 +1,7 @@
-use crate::{ArchUnitError, SliceProjectionError, UserError};
+use crate::{
+    common::{ArchUnitError, UserError},
+    slices::SliceProjectionError,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) enum SliceConfigurationError {

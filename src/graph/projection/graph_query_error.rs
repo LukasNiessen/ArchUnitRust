@@ -1,4 +1,4 @@
-use crate::PatternError;
+use crate::common::PatternError;
 
 /// Invalid graph query input or a collapse that cannot produce a report node.
 #[derive(Debug, Clone, thiserror::Error)]

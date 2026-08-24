@@ -7,7 +7,7 @@ use std::{
 use cargo_metadata::{DependencyKind, Metadata, TargetKind};
 
 use super::{SourceFile, SourceOptions};
-use crate::TechnicalError;
+use crate::common::TechnicalError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum CargoDependencyScope {
@@ -441,7 +441,7 @@ mod tests {
         CargoDependencyKind, CargoDependencyScope, CargoProject, CargoTarget, CargoTargetKind,
         normalize_crate_name, workspace_identifier,
     };
-    use crate::{SourceFile, SourceOptions};
+    use crate::common::{SourceFile, SourceOptions};
 
     fn target(kind: CargoTargetKind, identifier: &str) -> CargoTarget {
         CargoTarget::new(

@@ -262,6 +262,14 @@ The test matrix covers stable Rust on Linux, Windows, and macOS plus the declare
 Extraction tests use temporary directories and never depend on test ordering. Golden render outputs
 are deterministic and reviewed as text.
 
+The crate also analyzes its own production sources in `tests/architecture.rs`. These tests are
+ordinary public fluent rules, not a private graph assertion: `common` has an explicit external
+allowlist, peer domains are a layered blocklist, implementation files cannot depend on `src/lib.rs`,
+and every architectural unit is cycle-free after excluding Rust's structural `mod` and `pub use`
+edges. Mixed edges retain every non-excluded syntax kind, so a real `use` cycle cannot hide behind a
+parallel module declaration. The closed `Violation` and `Checkable` aggregation seam remains the
+deliberate Rust exception to one whole-crate file-level DAG. See ADR 0022.
+
 ## Sequential delivery plan
 
 Only one implementation branch and one pull request may be open at a time. Each PR closes one issue

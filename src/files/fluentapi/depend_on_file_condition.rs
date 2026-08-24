@@ -1,8 +1,11 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, Filter, PatternError, ProjectLocator,
-    RegexFactory, UserError, extract_graph_with_options, gather_file_dependency_violations,
-    locate_project_from, per_internal_edge, project_edges,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, Filter, PatternError, ProjectLocator, RegexFactory, UserError,
+        extract_graph_with_options, locate_project_from, per_internal_edge, project_edges,
+    },
+    files::gather_file_dependency_violations,
 };
 
 use super::{
@@ -73,19 +76,19 @@ impl DependOnFileCondition {
     }
 
     /// Further restricts dependency targets by filename using AND semantics.
-    pub fn with_name(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn with_name(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().filename_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Further restricts dependency targets by containing folder using AND semantics.
-    pub fn in_folder(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_folder(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().folder_matcher(pattern);
         self.with_filter(filter)
     }
 
     /// Further restricts dependency targets by complete path using AND semantics.
-    pub fn in_path(self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn in_path(self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         let filter = RegexFactory::default().path_matcher(pattern);
         self.with_filter(filter)
     }
@@ -148,7 +151,7 @@ impl Checkable for DependOnFileCondition {
 
 #[cfg(test)]
 mod tests {
-    use crate::{PatternTarget, project_files_in};
+    use crate::{common::PatternTarget, files::project_files_in};
 
     #[test]
     fn object_selectors_chain_immutably_with_and_semantics() {

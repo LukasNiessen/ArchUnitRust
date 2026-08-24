@@ -432,10 +432,16 @@ impl From<MetricPredicateViolation> for Violation {
 mod tests {
     use super::{Violation, ViolationKind};
     use crate::{
-        CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
-        ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
-        Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, ProjectedEdge,
-        RegexFactory, SliceDependencyRule, SliceDependencyViolation, project_to_nodes,
+        common::{
+            Edge, EmptyTestViolation, Graph, ImportKind, ProjectedEdge, RegexFactory,
+            project_to_nodes,
+        },
+        files::{
+            CustomFileViolation, CycleViolation, ExternalModuleDependencyViolation,
+            FileDependencyViolation, FileInfo, FilePatternViolation,
+        },
+        layers::{LayerDependencyRule, LayerDependencyViolation},
+        slices::{SliceDependencyRule, SliceDependencyViolation},
     };
 
     #[test]

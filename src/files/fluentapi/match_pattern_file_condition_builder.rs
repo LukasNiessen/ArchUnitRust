@@ -1,4 +1,7 @@
-use crate::{FileInfo, Filter, PatternError, ProjectLocator, RegexFactory};
+use crate::{
+    common::{Filter, PatternError, ProjectLocator, RegexFactory},
+    files::FileInfo,
+};
 
 use super::{
     CustomFileCondition, DependOnExternalModuleConditionBuilder, DependOnFileConditionBuilder,
@@ -51,19 +54,28 @@ impl MatchPatternFileConditionBuilder {
     }
 
     /// Requires every selected file's final path segment to match `pattern`.
-    pub fn have_name(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
+    pub fn have_name(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().filename_matcher(pattern);
         self.matching(check_filter)
     }
 
     /// Requires every selected file's containing folder to match `pattern`.
-    pub fn be_in_folder(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
+    pub fn be_in_folder(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().folder_matcher(pattern);
         self.matching(check_filter)
     }
 
     /// Requires every selected file's complete normalized path to match `pattern`.
-    pub fn be_in_path(self, pattern: impl Into<crate::PatternSpec>) -> MatchPatternFileCondition {
+    pub fn be_in_path(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> MatchPatternFileCondition {
         let check_filter = RegexFactory::default().path_matcher(pattern);
         self.matching(check_filter)
     }
@@ -95,7 +107,7 @@ impl MatchPatternFileConditionBuilder {
 mod tests {
     use std::path::Path;
 
-    use crate::project_files_in;
+    use crate::files::project_files_in;
 
     use super::MatchPatternFileConditionBuilder;
 
@@ -141,15 +153,15 @@ mod tests {
         assert!(!path.is_negated());
         assert_eq!(
             named.check_filter().map(|filter| filter.target()),
-            Some(crate::PatternTarget::Filename)
+            Some(crate::common::PatternTarget::Filename)
         );
         assert_eq!(
             folder.check_filter().map(|filter| filter.target()),
-            Some(crate::PatternTarget::PathWithoutFilename)
+            Some(crate::common::PatternTarget::PathWithoutFilename)
         );
         assert_eq!(
             path.check_filter().map(|filter| filter.target()),
-            Some(crate::PatternTarget::Path)
+            Some(crate::common::PatternTarget::Path)
         );
     }
 }

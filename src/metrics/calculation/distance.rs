@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{DistanceInfo, MetricMeasurement, MetricSubject};
+use crate::metrics::{DistanceInfo, MetricMeasurement, MetricSubject};
 
 /// Strict upper boundary for abstractness and instability in the zone of pain.
 pub const PAIN_LIMIT: f64 = 0.3;

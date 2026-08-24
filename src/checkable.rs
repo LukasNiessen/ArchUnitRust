@@ -1,6 +1,6 @@
 //! The execution contract shared by every terminal architecture rule.
 
-use crate::CheckLogger;
+use crate::common::CheckLogger;
 use crate::common::error::ArchUnitError;
 use crate::common::fluentapi::CheckOptions;
 use crate::violation::Violation;
@@ -64,7 +64,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{CheckResult, Checkable};
-    use crate::{ArchUnitError, CheckOptions, TechnicalError};
+    use crate::common::{ArchUnitError, CheckOptions, TechnicalError};
 
     struct OptionEchoRule;
 

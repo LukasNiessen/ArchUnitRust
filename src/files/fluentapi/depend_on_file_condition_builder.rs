@@ -1,4 +1,4 @@
-use crate::{Filter, PatternError, ProjectLocator, RegexFactory};
+use crate::common::{Filter, PatternError, ProjectLocator, RegexFactory};
 
 use super::{DependOnFileCondition, MatchPatternFileConditionBuilder};
 
@@ -44,19 +44,25 @@ impl DependOnFileConditionBuilder {
     }
 
     /// Selects dependency targets whose final path segment matches `pattern`.
-    pub fn with_name(self, pattern: impl Into<crate::PatternSpec>) -> DependOnFileCondition {
+    pub fn with_name(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> DependOnFileCondition {
         let filter = RegexFactory::default().filename_matcher(pattern);
         DependOnFileCondition::new(self, filter)
     }
 
     /// Selects dependency targets whose containing folder matches `pattern`.
-    pub fn in_folder(self, pattern: impl Into<crate::PatternSpec>) -> DependOnFileCondition {
+    pub fn in_folder(
+        self,
+        pattern: impl Into<crate::common::PatternSpec>,
+    ) -> DependOnFileCondition {
         let filter = RegexFactory::default().folder_matcher(pattern);
         DependOnFileCondition::new(self, filter)
     }
 
     /// Selects dependency targets whose complete normalized path matches `pattern`.
-    pub fn in_path(self, pattern: impl Into<crate::PatternSpec>) -> DependOnFileCondition {
+    pub fn in_path(self, pattern: impl Into<crate::common::PatternSpec>) -> DependOnFileCondition {
         let filter = RegexFactory::default().path_matcher(pattern);
         DependOnFileCondition::new(self, filter)
     }
@@ -64,7 +70,7 @@ impl DependOnFileConditionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{PatternTarget, project_files_in};
+    use crate::{common::PatternTarget, files::project_files_in};
 
     #[test]
     fn enters_each_object_selector_with_the_subject_mood_intact() {

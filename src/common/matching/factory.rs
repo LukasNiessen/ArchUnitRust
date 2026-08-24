@@ -152,7 +152,7 @@ impl RegexFactory {
 #[cfg(test)]
 mod tests {
     use super::{RegexFactory, RegexFactoryOptions};
-    use crate::{PatternSyntax, PatternTarget, pattern};
+    use crate::common::{PatternSyntax, PatternTarget, pattern};
 
     #[test]
     fn defaults_to_case_sensitive_globs() {

@@ -1,6 +1,7 @@
 use crate::{
-    ArchUnitError, ColorUtils, TestResult, TestResultOptions, TestViolation, Violation,
-    ViolationFactory,
+    common::ArchUnitError,
+    testing::{ColorUtils, TestResult, TestResultOptions, TestViolation, ViolationFactory},
+    violation::Violation,
 };
 
 /// Shapes structured violations into a framework-neutral pass flag and complete message.
@@ -110,8 +111,9 @@ fn format_violations(
 #[cfg(test)]
 mod tests {
     use crate::{
-        ArchUnitError, ColorChoice, EmptyTestViolation, ResultFactory, TechnicalError,
-        TestResultOptions, UserError, Violation,
+        common::{ArchUnitError, EmptyTestViolation, TechnicalError, UserError},
+        testing::{ColorChoice, ResultFactory, TestResultOptions},
+        violation::Violation,
     };
 
     fn empty_violation(subject: &str) -> Violation {

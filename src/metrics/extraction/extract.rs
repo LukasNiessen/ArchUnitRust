@@ -8,7 +8,9 @@ use syn::{
 use super::{
     FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, ProjectMetricsInfo, TypeInfo, TypeKind,
 };
-use crate::{ArchUnitError, CargoProject, SourceOptions, TechnicalError, enumerate_source_files};
+use crate::common::{
+    ArchUnitError, CargoProject, SourceOptions, TechnicalError, enumerate_source_files,
+};
 
 /// A syntax failure while extracting metrics from one source input.
 #[derive(Debug, thiserror::Error)]
@@ -637,7 +639,7 @@ fn raw_string_opening(characters: &[char], index: usize) -> Option<(usize, usize
 #[cfg(test)]
 mod tests {
     use super::{count_lines_of_code, extract_file_metrics};
-    use crate::TypeKind;
+    use crate::metrics::TypeKind;
 
     const SOURCE: &str = r#"
 use std::fmt::Debug;

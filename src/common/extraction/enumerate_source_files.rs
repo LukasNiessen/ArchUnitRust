@@ -6,7 +6,7 @@ use std::{
 };
 
 use super::{CargoProject, SourceFile, SourceOptions, cargo_project::workspace_identifier};
-use crate::{ArchUnitError, TechnicalError};
+use crate::common::{ArchUnitError, TechnicalError};
 
 /// Directory names omitted from source discovery wherever they occur.
 ///

@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{ArchUnitError, TechnicalError};
+use crate::common::{ArchUnitError, TechnicalError};
 
 use super::SliceConfigurationError;
 

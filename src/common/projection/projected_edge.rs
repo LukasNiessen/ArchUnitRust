@@ -1,4 +1,4 @@
-use crate::Edge;
+use crate::common::Edge;
 
 /// A labeled dependency retaining every raw edge collapsed into it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,7 +35,7 @@ impl ProjectedEdge {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind};
+    use crate::common::{Edge, ImportKind};
 
     use super::ProjectedEdge;
 

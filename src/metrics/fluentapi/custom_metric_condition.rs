@@ -1,7 +1,9 @@
 use crate::checkable::execute_logged_check;
 use crate::{
-    CheckOptions, CheckResult, Checkable, CustomMetricViolation, TypeInfo, Violation,
-    gather_empty_test_violations,
+    checkable::{CheckResult, Checkable},
+    common::{CheckOptions, gather_empty_test_violations},
+    metrics::{CustomMetricViolation, TypeInfo},
+    violation::Violation,
 };
 
 use super::CustomMetricSelection;

@@ -146,7 +146,7 @@ pub fn pattern(source: impl Into<String>) -> PatternSpec {
 #[cfg(test)]
 mod tests {
     use super::pattern;
-    use crate::PatternTarget;
+    use crate::common::PatternTarget;
 
     #[test]
     fn exclusions_are_consuming_ordered_and_optionally_targeted() {

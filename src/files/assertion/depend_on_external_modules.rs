@@ -1,4 +1,7 @@
-use crate::{Filter, ProjectedEdge, Violation};
+use crate::{
+    common::{Filter, ProjectedEdge},
+    violation::Violation,
+};
 
 use super::ExternalModuleDependencyViolation;
 
@@ -33,7 +36,10 @@ fn matches_any(identifier: &str, filters: &[Filter]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, ProjectedEdge, RegexFactory, ViolationKind};
+    use crate::{
+        common::{Edge, ImportKind, ProjectedEdge, RegexFactory},
+        violation::ViolationKind,
+    };
 
     use super::gather_external_module_dependency_violations;
 
@@ -54,7 +60,7 @@ mod tests {
         ]
     }
 
-    fn subject_filters() -> Vec<crate::Filter> {
+    fn subject_filters() -> Vec<crate::common::Filter> {
         vec![
             RegexFactory::default()
                 .filename_matcher("api.rs")
@@ -62,7 +68,7 @@ mod tests {
         ]
     }
 
-    fn allowed_modules() -> Vec<crate::Filter> {
+    fn allowed_modules() -> Vec<crate::common::Filter> {
         vec![
             RegexFactory::default()
                 .path_matcher("std")
@@ -83,7 +89,7 @@ mod tests {
         );
         let data = violations
             .iter()
-            .filter_map(crate::Violation::as_external_module_dependency)
+            .filter_map(crate::violation::Violation::as_external_module_dependency)
             .collect::<Vec<_>>();
 
         assert_eq!(data.len(), 1);
@@ -106,7 +112,7 @@ mod tests {
         );
         let targets = violations
             .iter()
-            .filter_map(crate::Violation::as_external_module_dependency)
+            .filter_map(crate::violation::Violation::as_external_module_dependency)
             .map(|violation| violation.dependency.target_label.as_str())
             .collect::<Vec<_>>();
 

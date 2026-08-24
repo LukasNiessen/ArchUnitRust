@@ -1,9 +1,17 @@
 use crate::{
-    CustomFileViolation, CustomMetricViolation, CycleViolation, EmptyTestViolation,
-    ExternalModuleDependencyViolation, FileDependencyViolation, FilePatternViolation,
-    LayerDependencyRule, LayerDependencyViolation, MetricPredicateViolation,
-    MetricThresholdViolation, MetricZoneViolation, ProjectedEdge, SliceDependencyRule,
-    SliceDependencyViolation, TestViolation, Violation,
+    common::{EmptyTestViolation, ProjectedEdge},
+    files::{
+        CustomFileViolation, CycleViolation, ExternalModuleDependencyViolation,
+        FileDependencyViolation, FilePatternViolation,
+    },
+    layers::{LayerDependencyRule, LayerDependencyViolation},
+    metrics::{
+        CustomMetricViolation, MetricPredicateViolation, MetricThresholdViolation,
+        MetricZoneViolation,
+    },
+    slices::{SliceDependencyRule, SliceDependencyViolation},
+    testing::TestViolation,
+    violation::Violation,
 };
 
 /// The sole mapping from structured violation data to human-readable prose.
@@ -287,12 +295,21 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::{
-        ArchitecturalZone, CustomFileViolation, CycleViolation, Edge, EmptyTestViolation,
-        ExternalModuleDependencyViolation, FileDependencyViolation, FileInfo, FilePatternViolation,
-        Graph, ImportKind, LayerDependencyRule, LayerDependencyViolation, MetricZoneViolation,
-        ProjectMetricsInfo, ProjectedEdge, RegexFactory, SliceDependencyRule,
-        SliceDependencyViolation, Violation, build_distance_infos, extract_file_metrics,
-        project_to_nodes,
+        common::{
+            Edge, EmptyTestViolation, Graph, ImportKind, ProjectedEdge, RegexFactory,
+            project_to_nodes,
+        },
+        files::{
+            CustomFileViolation, CycleViolation, ExternalModuleDependencyViolation,
+            FileDependencyViolation, FileInfo, FilePatternViolation,
+        },
+        layers::{LayerDependencyRule, LayerDependencyViolation},
+        metrics::{
+            ArchitecturalZone, MetricZoneViolation, ProjectMetricsInfo, build_distance_infos,
+            extract_file_metrics,
+        },
+        slices::{SliceDependencyRule, SliceDependencyViolation},
+        violation::Violation,
     };
 
     use super::ViolationFactory;
@@ -485,7 +502,7 @@ mod tests {
             .first()
             .expect("fixture should have one type")
             .clone();
-        let violation = Violation::from(crate::CustomMetricViolation::new(
+        let violation = Violation::from(crate::metrics::CustomMetricViolation::new(
             type_info,
             "field_count",
             "must have no more than zero fields",
@@ -509,12 +526,12 @@ mod tests {
             .first()
             .expect("fixture should contain one type")
             .clone();
-        let violation = Violation::from(crate::MetricThresholdViolation::new(
-            crate::MetricSubject::Type(type_info),
+        let violation = Violation::from(crate::metrics::MetricThresholdViolation::new(
+            crate::metrics::MetricSubject::Type(type_info),
             "method_count",
             4.0,
             4.0,
-            crate::MetricComparison::Below,
+            crate::metrics::MetricComparison::Below,
         ));
 
         let formatted = ViolationFactory::from_violation(&violation);
@@ -534,8 +551,8 @@ mod tests {
             .first()
             .expect("fixture should contain one type")
             .clone();
-        let violation = Violation::from(crate::MetricPredicateViolation::new(
-            crate::MetricSubject::Type(type_info),
+        let violation = Violation::from(crate::metrics::MetricPredicateViolation::new(
+            crate::metrics::MetricSubject::Type(type_info),
             "method_count",
             4.0,
         ));

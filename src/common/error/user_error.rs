@@ -50,7 +50,7 @@ fn source_suffix(source: Option<&(dyn Error + Send + Sync + 'static)>) -> String
 mod tests {
     use std::error::Error;
 
-    use crate::Pattern;
+    use crate::common::Pattern;
 
     use super::UserError;
 

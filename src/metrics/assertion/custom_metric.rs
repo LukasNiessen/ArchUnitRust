@@ -1,4 +1,4 @@
-use crate::TypeInfo;
+use crate::metrics::TypeInfo;
 
 /// A Rust type whose custom metric value did not satisfy a user predicate.
 #[derive(Debug, Clone, PartialEq)]
@@ -70,11 +70,11 @@ where
 mod tests {
     use std::cell::Cell;
 
-    use crate::extract_file_metrics;
+    use crate::metrics::extract_file_metrics;
 
     use super::gather_custom_metric_violations;
 
-    fn types() -> Vec<crate::TypeInfo> {
+    fn types() -> Vec<crate::metrics::TypeInfo> {
         extract_file_metrics(
             "src/types.rs",
             "struct Small { one: usize } struct Large { one: usize, two: usize }",

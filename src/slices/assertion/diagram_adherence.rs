@@ -1,4 +1,4 @@
-use crate::{PlantUmlDiagram, ProjectedEdge};
+use crate::{common::ProjectedEdge, slices::PlantUmlDiagram};
 
 use super::{DiagramAdherenceOptions, SliceDependencyRule, SliceDependencyViolation};
 
@@ -43,7 +43,10 @@ fn ignored(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, ImportKind, PlantUmlDependency, PlantUmlDiagram, ProjectedEdge};
+    use crate::{
+        common::{Edge, ImportKind, ProjectedEdge},
+        slices::{PlantUmlDependency, PlantUmlDiagram},
+    };
 
     use super::{DiagramAdherenceOptions, gather_diagram_adherence_violations};
 

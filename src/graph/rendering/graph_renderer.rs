@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{ArchUnitError, GraphReportSnapshot};
+use crate::{common::ArchUnitError, graph::GraphReportSnapshot};
 
 use super::{
     CsvRenderer, D2Renderer, DotRenderer, HtmlRenderer, JsonRenderer, MermaidRenderer,
@@ -140,7 +140,8 @@ impl GraphRenderer {
 #[cfg(test)]
 mod tests {
     use crate::{
-        GraphReportEdge, GraphReportNode, GraphReportSnapshot, GraphReportSummary, ImportKind,
+        common::ImportKind,
+        graph::{GraphReportEdge, GraphReportNode, GraphReportSnapshot, GraphReportSummary},
     };
 
     use super::{GraphRenderer, GraphReportFormat};

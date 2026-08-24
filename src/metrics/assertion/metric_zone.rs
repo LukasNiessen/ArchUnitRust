@@ -1,4 +1,4 @@
-use crate::{ArchitecturalZone, DistanceInfo, DistanceInput, DistanceMetric};
+use crate::metrics::{ArchitecturalZone, DistanceInfo, DistanceInput, DistanceMetric};
 
 /// A file component whose abstractness/instability point lies in a discouraged zone.
 #[derive(Debug, Clone, PartialEq)]
@@ -47,8 +47,10 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::{
-        ArchitecturalZone, Edge, Graph, ImportKind, ProjectMetricsInfo, build_distance_infos,
-        extract_file_metrics,
+        common::{Edge, Graph, ImportKind},
+        metrics::{
+            ArchitecturalZone, ProjectMetricsInfo, build_distance_infos, extract_file_metrics,
+        },
     };
 
     use super::gather_metric_zone_violations;

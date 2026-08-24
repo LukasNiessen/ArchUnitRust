@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Edge, Graph};
+use crate::common::{Edge, Graph};
 
 use super::{MappedEdge, ProjectedEdge};
 
@@ -40,7 +40,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{Edge, Graph, ImportKind};
+    use crate::common::{Edge, Graph, ImportKind};
 
     use super::{MappedEdge, project_edges};
 

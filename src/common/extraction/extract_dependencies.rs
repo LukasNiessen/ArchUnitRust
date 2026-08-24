@@ -8,7 +8,7 @@ use super::{
     enumerate_source_files,
     module_tree::extract_raw_dependencies,
 };
-use crate::ArchUnitError;
+use crate::common::ArchUnitError;
 
 /// Parses selected Cargo targets and extracts Rust dependency references.
 ///

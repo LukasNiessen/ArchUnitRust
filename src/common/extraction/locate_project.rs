@@ -6,7 +6,7 @@ use std::{
 use cargo_metadata::MetadataCommand;
 
 use super::{CargoProject, ProjectLocator};
-use crate::{ArchUnitError, TechnicalError, UserError};
+use crate::common::{ArchUnitError, TechnicalError, UserError};
 
 const MANIFEST_NAME: &str = "Cargo.toml";
 
@@ -121,7 +121,7 @@ fn explicit_start(path: &Path) -> Result<PathBuf, ArchUnitError> {
 #[cfg(test)]
 mod tests {
     use super::{locate_project, locate_project_from};
-    use crate::ProjectLocator;
+    use crate::common::ProjectLocator;
 
     #[test]
     fn auto_detection_finds_this_crate() {

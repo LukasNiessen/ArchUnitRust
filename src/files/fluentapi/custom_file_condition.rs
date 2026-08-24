@@ -2,9 +2,14 @@ use std::{fmt, sync::Arc};
 
 use crate::checkable::execute_logged_check;
 use crate::{
-    ArchUnitError, CheckOptions, CheckResult, Checkable, FileInfo, FilePredicate, Filter,
-    MatchPatternFileConditionBuilder, PatternError, ProjectLocator, UserError,
-    extract_graph_with_options, gather_custom_file_violations, locate_project_from,
+    checkable::{CheckResult, Checkable},
+    common::{
+        ArchUnitError, CheckOptions, Filter, PatternError, ProjectLocator, UserError,
+        extract_graph_with_options, locate_project_from,
+    },
+    files::{
+        FileInfo, FilePredicate, MatchPatternFileConditionBuilder, gather_custom_file_violations,
+    },
 };
 
 use crate::files::extraction::extract_file_info;
@@ -130,7 +135,7 @@ impl Checkable for CustomFileCondition {
 
 #[cfg(test)]
 mod tests {
-    use crate::{FileInfo, project_files_in};
+    use crate::files::{FileInfo, project_files_in};
 
     #[test]
     fn retains_scope_mood_message_and_predicate_in_a_cloneable_terminal() {

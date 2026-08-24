@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{MetricMeasurement, MetricSubject};
+use crate::metrics::{MetricMeasurement, MetricSubject};
 
 /// One exact numeric relationship used by the five threshold verbs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -139,7 +139,7 @@ pub fn gather_metric_threshold_violations(
 
 #[cfg(test)]
 mod tests {
-    use crate::{MetricMeasurement, MetricSubject, extract_file_metrics};
+    use crate::metrics::{MetricMeasurement, MetricSubject, extract_file_metrics};
 
     use super::{MetricComparison, gather_metric_threshold_violations, validate_metric_threshold};
 

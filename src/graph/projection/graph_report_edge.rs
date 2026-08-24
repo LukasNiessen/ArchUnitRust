@@ -1,4 +1,4 @@
-use crate::{ImportKind, ImportKindSet};
+use crate::common::{ImportKind, ImportKindSet};
 
 /// Aggregated dependency evidence in a graph report snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
