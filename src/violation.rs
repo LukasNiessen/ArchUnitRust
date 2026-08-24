@@ -8,7 +8,9 @@ use crate::files::assertion::{
     FileDependencyViolation, FilePatternViolation,
 };
 use crate::layers::assertion::LayerDependencyViolation;
-use crate::metrics::assertion::{CustomMetricViolation, MetricZoneViolation};
+use crate::metrics::assertion::{
+    CustomMetricViolation, MetricPredicateViolation, MetricThresholdViolation, MetricZoneViolation,
+};
 use crate::slices::assertion::SliceDependencyViolation;
 
 /// The machine-readable family of a [`Violation`].
@@ -37,6 +39,10 @@ pub enum ViolationKind {
     MetricZone,
     /// A user-defined metric value did not satisfy its predicate.
     CustomMetric,
+    /// A metric value did not meet an exact numeric threshold.
+    MetricThreshold,
+    /// A built-in metric value did not satisfy a user predicate.
+    MetricPredicate,
 }
 
 impl ViolationKind {
@@ -54,6 +60,8 @@ impl ViolationKind {
             Self::SliceDependency => "slice-dependency",
             Self::MetricZone => "metric-zone",
             Self::CustomMetric => "custom-metric",
+            Self::MetricThreshold => "metric-threshold",
+            Self::MetricPredicate => "metric-predicate",
         }
     }
 }
@@ -91,6 +99,10 @@ pub enum Violation {
     MetricZone(MetricZoneViolation),
     /// A user-defined type metric did not satisfy its predicate.
     CustomMetric(CustomMetricViolation),
+    /// A metric value did not meet an exact numeric threshold.
+    MetricThreshold(MetricThresholdViolation),
+    /// A built-in metric value did not satisfy a user predicate.
+    MetricPredicate(MetricPredicateViolation),
 }
 
 impl Violation {
@@ -108,6 +120,8 @@ impl Violation {
             Self::SliceDependency(_) => ViolationKind::SliceDependency,
             Self::MetricZone(_) => ViolationKind::MetricZone,
             Self::CustomMetric(_) => ViolationKind::CustomMetric,
+            Self::MetricThreshold(_) => ViolationKind::MetricThreshold,
+            Self::MetricPredicate(_) => ViolationKind::MetricPredicate,
         }
     }
 
@@ -124,7 +138,9 @@ impl Violation {
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -141,7 +157,9 @@ impl Violation {
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -158,7 +176,9 @@ impl Violation {
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -175,7 +195,9 @@ impl Violation {
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -194,7 +216,9 @@ impl Violation {
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -211,7 +235,9 @@ impl Violation {
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -228,7 +254,9 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::SliceDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -245,7 +273,9 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::MetricZone(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -262,7 +292,9 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::CustomMetric(_) => None,
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
         }
     }
 
@@ -279,7 +311,47 @@ impl Violation {
             | Self::CustomFile(_)
             | Self::LayerDependency(_)
             | Self::SliceDependency(_)
-            | Self::MetricZone(_) => None,
+            | Self::MetricZone(_)
+            | Self::MetricThreshold(_)
+            | Self::MetricPredicate(_) => None,
+        }
+    }
+
+    /// Returns numeric threshold data when a metric value missed its boundary.
+    #[must_use]
+    pub const fn as_metric_threshold(&self) -> Option<&MetricThresholdViolation> {
+        match self {
+            Self::MetricThreshold(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_)
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_)
+            | Self::MetricPredicate(_) => None,
+        }
+    }
+
+    /// Returns built-in metric predicate data when a callback rejected a value.
+    #[must_use]
+    pub const fn as_metric_predicate(&self) -> Option<&MetricPredicateViolation> {
+        match self {
+            Self::MetricPredicate(violation) => Some(violation),
+            Self::EmptyTest(_)
+            | Self::Cycle(_)
+            | Self::FilePattern(_)
+            | Self::FileDependency(_)
+            | Self::ExternalModuleDependency(_)
+            | Self::CustomFile(_)
+            | Self::LayerDependency(_)
+            | Self::SliceDependency(_)
+            | Self::MetricZone(_)
+            | Self::CustomMetric(_)
+            | Self::MetricThreshold(_) => None,
         }
     }
 }
@@ -341,6 +413,18 @@ impl From<MetricZoneViolation> for Violation {
 impl From<CustomMetricViolation> for Violation {
     fn from(violation: CustomMetricViolation) -> Self {
         Self::CustomMetric(violation)
+    }
+}
+
+impl From<MetricThresholdViolation> for Violation {
+    fn from(violation: MetricThresholdViolation) -> Self {
+        Self::MetricThreshold(violation)
+    }
+}
+
+impl From<MetricPredicateViolation> for Violation {
+    fn from(violation: MetricPredicateViolation) -> Self {
+        Self::MetricPredicate(violation)
     }
 }
 

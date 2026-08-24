@@ -176,6 +176,33 @@ The calculation and predicate each run once per selected type on every execution
 callbacks propagate normally with their Rust backtrace; they are never converted into architecture
 violations. Non-finite custom values are preserved so a predicate can choose its own policy.
 
+Every metric selection supports exactly five numeric threshold verbs plus `should_satisfy`:
+
+```rust,no_run
+use archunit::{MetricSubject, assert_passes, metrics};
+
+let threshold = metrics()
+    .for_types_matching("*Service")
+    .count()
+    .method_count()
+    .should_be_below_or_equal(20.0);
+assert_passes!(threshold);
+
+let predicate = metrics()
+    .distance()
+    .instability()
+    .should_satisfy(|value, subject: &MetricSubject| {
+        subject.as_distance().is_some() && value <= 0.8
+    });
+assert_passes!(predicate);
+```
+
+The other threshold names are `should_be_below`, `should_be_above`, `should_be`, and
+`should_be_above_or_equal`; there are intentionally no synonyms. Thresholds must be finite and
+`should_be` uses exact `f64` equality. Use `should_satisfy` when a project needs an explicit
+floating-point tolerance. Built-in predicates receive `MetricSubject`; custom-metric predicates keep
+the more precise `TypeInfo` argument.
+
 ## Named layer policies
 
 Layers turn a set of file selectors into a compact dependency policy. The target list is a borrowed
