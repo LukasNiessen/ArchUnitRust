@@ -1,0 +1,78 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the guide and API reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
+    outputs:
+      pages_enabled: ${{ steps.site.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the minimum supported Rust toolchain
+        run: rustup toolchain install 1.85.0 --profile minimal --no-self-update
+
+      - name: Validate every guide example and site invariant
+        run: |
+          cargo +1.85.0 test --doc --all-features
+          cargo +1.85.0 test --test docs_site
+
+      - id: site
+        name: Detect whether GitHub Pages is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" --silent 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Pages is not enabled::The guide and API were built but not published. Enable GitHub Actions as the Pages source."
+          fi
+
+      - if: steps.site.outputs.enabled == 'true'
+        uses: actions/configure-pages@v6
+
+      - name: Build the guide
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+
+      - name: Build and attach the API reference
+        run: |
+          cargo +1.85.0 doc --all-features --no-deps
+          mkdir -p _site/api
+          cp -R target/doc/. _site/api/
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./_site
+
+  deploy:
+    name: Publish to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.pages_enabled == 'true'
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

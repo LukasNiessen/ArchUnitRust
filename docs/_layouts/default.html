@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="{{ site.lang | default: 'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page.url == '/' %}{{ site.title }} — {{ site.description }}{% else %}{{ page.title }} · {{ site.title }}{% endif %}</title>
+    <meta name="description" content="{{ page.description | default: site.description }}">
+    <meta name="theme-color" content="#9a3412">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% if page.url == '/' %}{{ site.title }}{% else %}{{ page.title }} · {{ site.title }}{% endif %}">
+    <meta property="og:description" content="{{ page.description | default: site.description }}">
+    <meta property="og:url" content="{{ page.url | absolute_url }}">
+    <meta property="og:image" content="{{ '/assets/og.png' | absolute_url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="{{ '/assets/og.png' | absolute_url }}">
+    <link rel="canonical" href="{{ page.url | absolute_url }}">
+    <link rel="stylesheet" href="{{ '/assets/docs.css' | relative_url }}">
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to the page</a>
+
+    <header class="banner">
+      <div class="banner-inner">
+        <a class="wordmark" href="{{ '/' | relative_url }}">ArchUnit<span>Rust</span></a>
+        <p class="tagline">Architecture rules as ordinary Rust tests.</p>
+        <nav class="elsewhere" aria-label="Project links">
+          <a href="{{ site.repository_url }}">Source</a>
+          <a href="{{ site.api_reference_path | relative_url }}">API reference</a>
+          {% for sibling in site.siblings %}<a href="{{ sibling.url }}">{{ sibling.name }}</a>{% endfor %}
+        </nav>
+      </div>
+    </header>
+
+    <div class="page">
+      {%- assign chapters = site.pages | where_exp: 'chapter', 'chapter.nav_order' | sort: 'nav_order' -%}
+      <nav class="chapters" aria-label="Documentation">
+        <ol>
+          {%- for chapter in chapters %}
+          <li>
+            <a href="{{ chapter.url | relative_url }}"{% if chapter.url == page.url %} aria-current="page"{% endif %}>{{ chapter.title }}</a>
+          </li>
+          {%- endfor %}
+        </ol>
+      </nav>
+
+      <main id="content" class="prose">
+        {{ content }}
+      </main>
+    </div>
+
+    <footer class="colophon">
+      <p>ArchUnitRust is the Rust member of ArchUnitEverything, one architecture-testing library per language.</p>
+      <p>
+        <a href="{{ site.repository_url }}/blob/main/docs/{{ page.path }}">Edit this page</a> ·
+        <a href="{{ site.repository_url }}/blob/main/docs/PORTING_PLAN.md">Porting plan</a> ·
+        <a href="{{ site.api_reference_path | relative_url }}">Rust API</a>
+      </p>
+    </footer>
+  </body>
+</html>

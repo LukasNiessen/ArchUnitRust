@@ -6,6 +6,9 @@ Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUni
 > **Status:** usable from Git and under active development. The crate is not published on
 > crates.io yet; the current package version is `0.0.1` and requires Rust 1.85 or newer.
 
+[User guide](https://lukasniessen.github.io/ArchUnitRust/) ·
+[API reference](https://lukasniessen.github.io/ArchUnitRust/api/archunit/)
+
 ## Install
 
 ArchUnit rules belong in the project that they check, so add the crate as a development dependency:
@@ -138,9 +141,7 @@ The sections after this guide are the detailed reference for the implemented sur
 
 - crates.io publication is tracked by [#44](https://github.com/LukasNiessen/ArchUnitRust/issues/44),
   so installation currently uses the Git repository;
-- hosted API/user documentation is tracked by
-  [#42](https://github.com/LukasNiessen/ArchUnitRust/issues/42), and repository CI by
-  [#43](https://github.com/LukasNiessen/ArchUnitRust/issues/43);
+- repository CI is tracked by [#43](https://github.com/LukasNiessen/ArchUnitRust/issues/43);
 - extraction is syntax-based: it does not expand macros or inspect build-script-generated source,
   evaluates `cfg` branches as a conservative union, and exposes files rather than Rust items as
   dependency nodes.

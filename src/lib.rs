@@ -7,6 +7,8 @@ mod files;
 mod graph;
 mod layers;
 mod metrics;
+#[cfg(doctest)]
+mod site_docs;
 mod slices;
 mod testing;
 mod violation;
