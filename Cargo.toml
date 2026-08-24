@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.85"
 description = "Architecture testing for Rust"
 repository = "https://github.com/LukasNiessen/ArchUnitRust"
+documentation = "https://lukasniessen.github.io/ArchUnitRust/api/archunit/"
 license = "MIT"
 readme = "README.md"
 keywords = ["architecture", "testing", "dependencies", "static-analysis"]
