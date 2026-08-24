@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::{cell::Cell, panic::AssertUnwindSafe};
 
 use archunit::{
-    ArchitecturalZone, CheckOptions, Checkable, DistanceMetric, LcomInput, MetricSubject, TypeKind,
-    ViolationKind, metrics_in,
+    ArchitecturalZone, CheckOptions, Checkable, DistanceMetric, LcomInput, MetricComparison,
+    MetricSubject, TypeKind, ViolationKind, metrics_in,
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -528,4 +528,218 @@ fn panics_from_custom_metric_callbacks_propagate() {
 
     assert!(calculation_panic.is_err());
     assert!(predicate_panic.is_err());
+}
+
+#[test]
+fn all_five_threshold_verbs_are_available_on_every_metric_family() {
+    let root = fixture("metrics_project");
+
+    let count = metrics_in(root.as_path())
+        .for_types_matching("Service")
+        .count()
+        .method_count();
+    assert_eq!(
+        count.clone().should_be_below(5.0).comparison(),
+        MetricComparison::Below
+    );
+    assert_eq!(
+        count.clone().should_be_above(3.0).comparison(),
+        MetricComparison::Above
+    );
+    assert_eq!(
+        count.clone().should_be(4.0).comparison(),
+        MetricComparison::Equal
+    );
+    assert_eq!(
+        count.clone().should_be_below_or_equal(4.0).comparison(),
+        MetricComparison::BelowOrEqual
+    );
+    assert_eq!(
+        count.should_be_above_or_equal(4.0).comparison(),
+        MetricComparison::AboveOrEqual
+    );
+
+    let lcom = metrics_in(root.as_path())
+        .for_types_matching("Service")
+        .lcom()
+        .lcom4()
+        .should_be(1.0);
+    let distance = metrics_in(fixture("distance_project"))
+        .with_name("lib.rs")
+        .distance()
+        .instability()
+        .should_be_above_or_equal(1.0);
+    let custom = metrics_in(root)
+        .for_types_matching("Service")
+        .custom_metric("fields", "field count", |info| info.fields().len() as f64)
+        .should_be_above(1.0);
+
+    for rule in [&lcom as &dyn Checkable, &distance, &custom] {
+        assert!(
+            rule.check()
+                .expect("fixture threshold should execute")
+                .is_empty()
+        );
+    }
+}
+
+#[test]
+fn exact_threshold_failures_retain_metric_subject_and_boundary() {
+    let rule = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .count()
+        .method_count()
+        .should_be_below(4.0);
+
+    let violations = rule.check().expect("threshold should execute");
+
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].kind(), ViolationKind::MetricThreshold);
+    let violation = violations[0]
+        .as_metric_threshold()
+        .expect("the result should retain threshold data");
+    assert_eq!(violation.identifier(), "Service");
+    assert_eq!(violation.metric_name, "method_count");
+    assert_eq!(violation.value, 4.0);
+    assert_eq!(violation.threshold, 4.0);
+    assert_eq!(violation.comparison, MetricComparison::Below);
+    assert!(violation.subject.as_type().is_some());
+}
+
+#[test]
+fn built_in_should_satisfy_receives_value_and_typed_subject_for_each_family() {
+    let count_calls = Cell::new(0);
+    let count = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .count()
+        .field_count()
+        .should_satisfy(|value, subject| {
+            count_calls.set(count_calls.get() + 1);
+            value < 2.0 && subject.as_type().is_some()
+        });
+    let lcom = metrics_in(fixture("metrics_project"))
+        .for_types_matching("Service")
+        .lcom()
+        .lcom4()
+        .should_satisfy(|value, subject| value == 1.0 && subject.as_type().is_some());
+    let distance = metrics_in(fixture("distance_project"))
+        .with_name("lib.rs")
+        .distance()
+        .instability()
+        .should_satisfy(|value, subject| value == 1.0 && subject.as_distance().is_some());
+    let file_count = metrics_in(fixture("metrics_project"))
+        .with_name("domain.rs")
+        .count()
+        .lines_of_code()
+        .should_satisfy(|value, subject| value > 0.0 && subject.as_file().is_some());
+
+    let count_violations = count.check().expect("count predicate should execute");
+    assert_eq!(count_calls.get(), 1);
+    assert_eq!(count_violations.len(), 1);
+    assert_eq!(count_violations[0].kind(), ViolationKind::MetricPredicate);
+    let violation = count_violations[0]
+        .as_metric_predicate()
+        .expect("the result should retain predicate data");
+    assert_eq!(violation.identifier(), "Service");
+    assert_eq!(violation.metric_name, "field_count");
+    assert_eq!(violation.value, 2.0);
+    assert!(
+        lcom.check()
+            .expect("LCOM predicate should execute")
+            .is_empty()
+    );
+    assert!(
+        distance
+            .check()
+            .expect("distance predicate should execute")
+            .is_empty()
+    );
+    assert!(
+        file_count
+            .check()
+            .expect("file count predicate should execute")
+            .is_empty()
+    );
+}
+
+#[test]
+fn threshold_and_predicate_rules_guard_empty_metric_populations() {
+    let root = fixture("metrics_project");
+    let threshold = metrics_in(root.as_path())
+        .for_types_matching("Missing*")
+        .count()
+        .method_count()
+        .should_be_below(10.0);
+    let predicate_calls = Cell::new(0);
+    let predicate = metrics_in(root)
+        .for_types_matching("Missing*")
+        .count()
+        .method_count()
+        .should_satisfy(|_, _| {
+            predicate_calls.set(predicate_calls.get() + 1);
+            true
+        });
+
+    let strict = threshold
+        .check()
+        .expect("empty threshold should have a verdict");
+    let allowed = threshold
+        .check_with(&CheckOptions::new().with_allow_empty_tests(true))
+        .expect("explicit empty threshold should pass");
+    let predicate_strict = predicate
+        .check()
+        .expect("empty predicate should have a verdict");
+
+    assert_eq!(strict.len(), 1);
+    assert_eq!(strict[0].kind(), ViolationKind::EmptyTest);
+    assert_eq!(
+        strict[0]
+            .as_empty_test()
+            .expect("strict result should retain empty-test data")
+            .subject,
+        "metric types"
+    );
+    assert!(allowed.is_empty());
+    assert_eq!(predicate_strict.len(), 1);
+    assert_eq!(predicate_strict[0].kind(), ViolationKind::EmptyTest);
+    assert_eq!(predicate_calls.get(), 0);
+}
+
+#[test]
+fn invalid_thresholds_fail_before_discovery_and_preserve_fluent_error_order() {
+    let missing = PathBuf::from("definitely/missing");
+    let invalid_threshold = metrics_in(missing.as_path())
+        .count()
+        .lines_of_code()
+        .should_be_below(f64::NAN)
+        .check()
+        .expect_err("NaN threshold should be rejected before discovery");
+    let first_selector_error = metrics_in(missing.as_path())
+        .in_path("src/[")
+        .count()
+        .lines_of_code()
+        .should_be_above(f64::INFINITY)
+        .check()
+        .expect_err("the earlier selector error should win");
+    let first_custom_error = metrics_in(missing)
+        .custom_metric("", "", |_| 1.0)
+        .should_be(f64::NEG_INFINITY)
+        .check()
+        .expect_err("the earlier custom metric error should win");
+
+    assert!(
+        invalid_threshold
+            .to_string()
+            .contains("threshold must be finite")
+    );
+    assert!(
+        first_selector_error
+            .to_string()
+            .contains("invalid in_path pattern")
+    );
+    assert!(
+        first_custom_error
+            .to_string()
+            .contains("name must not be empty")
+    );
 }
