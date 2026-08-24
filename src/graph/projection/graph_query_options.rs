@@ -1,4 +1,4 @@
-use crate::Filter;
+use crate::common::Filter;
 
 use super::{GraphCollapse, GraphQueryError};
 
@@ -142,10 +142,10 @@ impl GraphQueryOptions {
 
 #[cfg(test)]
 mod tests {
-    use crate::RegexFactory;
+    use crate::common::RegexFactory;
 
     use super::GraphQueryOptions;
-    use crate::GraphQueryError;
+    use crate::graph::GraphQueryError;
 
     #[test]
     fn defaults_exclude_external_and_self_edges_without_queries_or_collapse() {

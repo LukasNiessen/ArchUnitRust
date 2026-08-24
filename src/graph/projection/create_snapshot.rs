@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use crate::{Edge, Graph};
+use crate::common::{Edge, Graph};
 
 use super::{
     GraphQueryError, GraphQueryOptions, GraphReportEdge, GraphReportNode, GraphReportSnapshot,
@@ -98,8 +98,11 @@ fn build_nodes(
 #[cfg(test)]
 mod tests {
     use crate::{
-        Edge, FolderDepthCollapse, Graph, GraphCollapse, GraphQueryOptions, GraphSnapshotFactory,
-        ImportKind, PatternCollapse, RegexFactory,
+        common::{Edge, Graph, ImportKind, RegexFactory},
+        graph::{
+            FolderDepthCollapse, GraphCollapse, GraphQueryOptions, GraphSnapshotFactory,
+            PatternCollapse,
+        },
     };
 
     fn sample_graph() -> Graph {
@@ -143,7 +146,7 @@ mod tests {
         ])
     }
 
-    fn filter(pattern: &str) -> crate::Filter {
+    fn filter(pattern: &str) -> crate::common::Filter {
         RegexFactory::default()
             .path_matcher(pattern)
             .expect("fixture selector should compile")

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{GraphReportEdge, GraphReportSnapshot};
+use crate::graph::{GraphReportEdge, GraphReportSnapshot};
 
 use super::escaping::{mermaid_label, single_line};
 

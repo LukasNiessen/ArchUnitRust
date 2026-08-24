@@ -1,4 +1,4 @@
-use crate::GraphReportSnapshot;
+use crate::graph::GraphReportSnapshot;
 
 use super::escaping::csv_field;
 

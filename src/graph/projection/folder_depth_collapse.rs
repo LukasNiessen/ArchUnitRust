@@ -25,7 +25,7 @@ impl FolderDepthCollapse {
 #[cfg(test)]
 mod tests {
     use super::FolderDepthCollapse;
-    use crate::GraphQueryError;
+    use crate::graph::GraphQueryError;
 
     #[test]
     fn requires_a_positive_depth() {

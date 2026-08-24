@@ -1,4 +1,4 @@
-use crate::GraphReportSnapshot;
+use crate::graph::GraphReportSnapshot;
 
 /// Renders the complete graph snapshot as stable JSON.
 #[derive(Debug, Clone, Copy, Default)]

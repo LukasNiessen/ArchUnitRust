@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{Edge, ImportKind};
+use crate::common::{Edge, ImportKind};
 
 use super::{GraphCollapse, GraphQueryError, GraphReportEdge, collapse_graph_node};
 
@@ -38,8 +38,8 @@ pub fn aggregate_graph_edges(
 #[cfg(test)]
 mod tests {
     use crate::{
-        Edge, FolderDepthCollapse, GraphCollapse, ImportKind, PatternCollapse,
-        aggregate_graph_edges,
+        common::{Edge, ImportKind},
+        graph::{FolderDepthCollapse, GraphCollapse, PatternCollapse, aggregate_graph_edges},
     };
 
     #[test]

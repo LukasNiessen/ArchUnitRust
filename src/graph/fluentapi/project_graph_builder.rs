@@ -1,10 +1,15 @@
 use std::path::Path;
 
 use crate::{
-    ArchUnitError, CheckOptions, FolderDepthCollapse, GraphCollapse, GraphQueryError,
-    GraphQueryOptions, GraphRenderer, GraphReportFormat, GraphReportSnapshot, GraphReportSummary,
-    PatternCollapse, PatternError, ProjectLocator, RegexFactory, UserError, create_graph_snapshot,
-    extract_graph_with_options, locate_project_from,
+    common::{
+        ArchUnitError, CheckOptions, PatternError, ProjectLocator, RegexFactory, UserError,
+        extract_graph_with_options, locate_project_from,
+    },
+    graph::{
+        FolderDepthCollapse, GraphCollapse, GraphQueryError, GraphQueryOptions, GraphRenderer,
+        GraphReportFormat, GraphReportSnapshot, GraphReportSummary, PatternCollapse,
+        create_graph_snapshot,
+    },
 };
 
 /// Immutable query builder for dependency-graph snapshots and reports.
@@ -40,7 +45,11 @@ impl ProjectGraphBuilder {
     }
 
     /// Keeps matching nodes and their undirected neighbors up to `depth` hops away.
-    pub fn focus_on(mut self, pattern: impl Into<crate::PatternSpec>, depth: usize) -> Self {
+    pub fn focus_on(
+        mut self,
+        pattern: impl Into<crate::common::PatternSpec>,
+        depth: usize,
+    ) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.options = self.options.with_focus(filter, depth),
             Err(source) => self.record_pattern_error("focus", source),
@@ -49,7 +58,7 @@ impl ProjectGraphBuilder {
     }
 
     /// Keeps matching nodes and every transitive outgoing dependency.
-    pub fn reachable_from(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn reachable_from(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.options = self.options.with_reachable_from(filter),
             Err(source) => self.record_pattern_error("reachable-from", source),
@@ -58,7 +67,7 @@ impl ProjectGraphBuilder {
     }
 
     /// Keeps matching nodes and every transitive incoming dependent.
-    pub fn dependents_of(mut self, pattern: impl Into<crate::PatternSpec>) -> Self {
+    pub fn dependents_of(mut self, pattern: impl Into<crate::common::PatternSpec>) -> Self {
         match RegexFactory::default().path_matcher(pattern) {
             Ok(filter) => self.options = self.options.with_dependents_of(filter),
             Err(source) => self.record_pattern_error("dependents-of", source),
@@ -250,7 +259,10 @@ fn configuration_error(error: GraphQueryError) -> ArchUnitError {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ArchUnitError, CheckOptions, GraphCollapse, dependency_graph, project_graph_in};
+    use crate::{
+        common::{ArchUnitError, CheckOptions},
+        graph::{GraphCollapse, dependency_graph, project_graph_in},
+    };
 
     #[test]
     fn modifiers_are_consuming_branchable_values() {

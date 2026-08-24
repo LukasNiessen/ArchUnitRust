@@ -1,4 +1,4 @@
-use crate::Pattern;
+use crate::common::Pattern;
 
 use super::GraphQueryError;
 
@@ -62,7 +62,7 @@ impl PatternCollapse {
 #[cfg(test)]
 mod tests {
     use super::PatternCollapse;
-    use crate::GraphQueryError;
+    use crate::graph::GraphQueryError;
 
     #[test]
     fn defaults_to_the_first_capture_with_rust_replacement_syntax() {

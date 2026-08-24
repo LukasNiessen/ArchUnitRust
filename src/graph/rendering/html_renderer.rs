@@ -1,4 +1,4 @@
-use crate::{GraphReportEdge, GraphReportSnapshot};
+use crate::graph::{GraphReportEdge, GraphReportSnapshot};
 
 use super::escaping::html;
 use super::{D2Renderer, DotRenderer, JsonRenderer, MermaidRenderer};
