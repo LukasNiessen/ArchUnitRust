@@ -203,6 +203,30 @@ The other threshold names are `should_be_below`, `should_be_above`, `should_be`,
 floating-point tolerance. Built-in predicates receive `MetricSubject`; custom-metric predicates keep
 the more precise `TypeInfo` argument.
 
+Each built-in metric family can also be exported as one self-contained HTML document. The exporter
+adds `.html` when needed, creates missing parent directories, and returns the final path:
+
+```rust,no_run
+use archunit::{ArchUnitError, MetricsExportOptions, metrics};
+
+fn export_metrics() -> Result<(), ArchUnitError> {
+    let options = MetricsExportOptions::new()
+        .with_title("Service cohesion")
+        .with_timestamp(false);
+
+    metrics()
+        .for_types_matching("*Service")
+        .lcom()
+        .export_as_html_with("target/architecture/cohesion", &options)?;
+    Ok(())
+}
+```
+
+`count()`, `lcom()`, and `distance()` export every metric in their family from one project
+snapshot. `MetricsExporter` also renders or writes a `MetricsReportData` map directly. Reports have
+no scripts or network dependencies; names, values, and titles are HTML-escaped. Timestamps are UTC
+and can be disabled for byte-stable build artifacts. Custom CSS replaces the built-in stylesheet.
+
 ## Named layer policies
 
 Layers turn a set of file selectors into a compact dependency policy. The target list is a borrowed

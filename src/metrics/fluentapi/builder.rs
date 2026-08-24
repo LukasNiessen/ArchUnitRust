@@ -1,10 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
     ArchUnitError, CheckOptions, CountMetric, DistanceInfo, DistanceMetric, Filter, LcomMetric,
-    MetricMeasurement, MetricSubject, PatternError, PatternTarget, ProjectLocator,
-    ProjectMetricsInfo, RegexFactory, SourceOptions, TypeInfo, UserError, extract_distance_infos,
-    extract_project_metrics, locate_project_from,
+    MetricMeasurement, MetricSubject, MetricsExportOptions, MetricsExporter, PatternError,
+    PatternTarget, ProjectLocator, ProjectMetricsInfo, RegexFactory, SourceOptions, TypeInfo,
+    UserError, extract_distance_infos, extract_project_metrics, locate_project_from,
 };
 
 use super::{
@@ -365,6 +365,28 @@ pub struct DistanceMetricsBuilder {
 }
 
 impl DistanceMetricsBuilder {
+    /// Exports every distance metric with default presentation options.
+    pub fn export_as_html(self, output_path: impl AsRef<Path>) -> Result<PathBuf, ArchUnitError> {
+        self.export_as_html_with(output_path, &MetricsExportOptions::default())
+    }
+
+    /// Exports every distance metric with explicit presentation options.
+    pub fn export_as_html_with(
+        self,
+        output_path: impl AsRef<Path>,
+        options: &MetricsExportOptions,
+    ) -> Result<PathBuf, ArchUnitError> {
+        self.query.validate_configuration()?;
+        let path = MetricsExporter::validate_export(output_path.as_ref(), options)?;
+        let infos = self.query.distance_infos_with(&CheckOptions::default())?;
+        let measurements = DistanceMetric::ALL
+            .into_iter()
+            .flat_map(|metric| metric.measurements(&infos))
+            .collect::<Vec<_>>();
+        let data = MetricsExporter::data_from_measurements(&measurements);
+        MetricsExporter::export_to_validated_path(&data, path, options)
+    }
+
     /// Selects trait-declaration abstractness.
     pub fn abstractness(self) -> DistanceMetricSelection {
         self.select(DistanceMetric::Abstractness)
@@ -471,6 +493,28 @@ pub struct LcomMetricsBuilder {
 }
 
 impl LcomMetricsBuilder {
+    /// Exports every LCOM metric with default presentation options.
+    pub fn export_as_html(self, output_path: impl AsRef<Path>) -> Result<PathBuf, ArchUnitError> {
+        self.export_as_html_with(output_path, &MetricsExportOptions::default())
+    }
+
+    /// Exports every LCOM metric with explicit presentation options.
+    pub fn export_as_html_with(
+        self,
+        output_path: impl AsRef<Path>,
+        options: &MetricsExportOptions,
+    ) -> Result<PathBuf, ArchUnitError> {
+        self.query.validate_configuration()?;
+        let path = MetricsExporter::validate_export(output_path.as_ref(), options)?;
+        let project = self.query.analyze()?;
+        let measurements = LcomMetric::ALL
+            .into_iter()
+            .flat_map(|metric| metric.measurements(&project))
+            .collect::<Vec<_>>();
+        let data = MetricsExporter::data_from_measurements(&measurements);
+        MetricsExporter::export_to_validated_path(&data, path, options)
+    }
+
     /// Selects normalized method/field distance under the LCOM96a name.
     pub fn lcom96a(self) -> LcomMetricSelection {
         self.select(LcomMetric::Lcom96a)
@@ -582,6 +626,28 @@ pub struct CountMetricsBuilder {
 }
 
 impl CountMetricsBuilder {
+    /// Exports every built-in count metric with default presentation options.
+    pub fn export_as_html(self, output_path: impl AsRef<Path>) -> Result<PathBuf, ArchUnitError> {
+        self.export_as_html_with(output_path, &MetricsExportOptions::default())
+    }
+
+    /// Exports every built-in count metric with explicit presentation options.
+    pub fn export_as_html_with(
+        self,
+        output_path: impl AsRef<Path>,
+        options: &MetricsExportOptions,
+    ) -> Result<PathBuf, ArchUnitError> {
+        self.query.validate_configuration()?;
+        let path = MetricsExporter::validate_export(output_path.as_ref(), options)?;
+        let project = self.query.analyze()?;
+        let measurements = CountMetric::ALL
+            .into_iter()
+            .flat_map(|metric| metric.measurements(&project))
+            .collect::<Vec<_>>();
+        let data = MetricsExporter::data_from_measurements(&measurements);
+        MetricsExporter::export_to_validated_path(&data, path, options)
+    }
+
     /// Counts methods with a `self` receiver for every selected type.
     pub fn method_count(self) -> MetricSelection {
         self.select(CountMetric::MethodCount)

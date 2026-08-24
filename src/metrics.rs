@@ -4,3 +4,4 @@ pub mod assertion;
 pub mod calculation;
 pub mod extraction;
 pub mod fluentapi;
+pub mod reporting;
