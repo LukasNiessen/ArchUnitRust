@@ -71,8 +71,9 @@ pub use metrics::calculation::{
     CountMetric, LcomInput, LcomMetric, MetricMeasurement, MetricSubject,
 };
 pub use metrics::extraction::{
-    FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, MetricsExtractionError, ProjectMetricsInfo,
-    TypeInfo, TypeKind, extract_file_metrics, extract_project_metrics,
+    DistanceInfo, FieldInfo, FileMetricsInfo, ImplInfo, MethodInfo, MetricsExtractionError,
+    ProjectMetricsInfo, TypeInfo, TypeKind, build_distance_infos, extract_distance_infos,
+    extract_file_metrics, extract_project_metrics,
 };
 pub use metrics::fluentapi::{
     CountMetricsBuilder, LcomMetricSelection, LcomMetricsBuilder, MetricSelection, MetricsBuilder,
