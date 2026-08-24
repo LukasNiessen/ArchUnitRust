@@ -156,6 +156,26 @@ let rule = metrics()
 assert_passes!(rule);
 ```
 
+Project-specific metrics use generic callbacks over the full immutable Rust type model. The same
+selection can be measured repeatedly or consumed into a typed predicate rule:
+
+```rust,no_run
+use archunit::{TypeInfo, assert_passes, metrics};
+
+let member_count = metrics().custom_metric(
+    "member_count",
+    "methods plus fields must remain manageable",
+    |info: &TypeInfo| (info.methods().len() + info.fields().len()) as f64,
+);
+let rule = member_count.should_satisfy(|value, _info| value <= 20.0);
+
+assert_passes!(rule);
+```
+
+The calculation and predicate each run once per selected type on every execution. Panics from user
+callbacks propagate normally with their Rust backtrace; they are never converted into architecture
+violations. Non-finite custom values are preserved so a predicate can choose its own policy.
+
 ## Named layer policies
 
 Layers turn a set of file selectors into a compact dependency policy. The target list is a borrowed

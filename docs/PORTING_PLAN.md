@@ -201,8 +201,10 @@ Coupling is always calculated across the full project snapshot; fluent selectors
 components without changing their topology. See ADR 0016 for formulas, denominator behavior, and
 strict zone boundaries.
 
-Custom metrics receive `TypeInfo`. All threshold verbs remain the shared six. Every metric documents
-its population and zero-denominator behavior with table-driven tests.
+Custom metrics receive immutable `TypeInfo` through generic owned callbacks. Custom predicate panics
+propagate as ordinary Rust panics rather than being reclassified as violations. All threshold verbs
+remain the shared six. Every metric documents its population and zero-denominator behavior with
+table-driven tests.
 
 ## Test and quality strategy
 
