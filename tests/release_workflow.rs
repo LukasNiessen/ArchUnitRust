@@ -1,6 +1,6 @@
 use std::fs;
 
-const VERSION: &str = "0.0.1";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[test]
 fn manifest_and_archive_metadata_are_ready_for_crates_io() {
@@ -36,19 +36,21 @@ fn manifest_and_archive_metadata_are_ready_for_crates_io() {
     assert!(license.contains("Permission is hereby granted, free of charge"));
 
     let changelog = read("CHANGELOG.md");
-    assert!(changelog.contains(&format!("## [{VERSION}] - 2026-08-24")));
+    assert!(changelog.contains(&format!("## [{VERSION}] - ")));
     assert!(changelog.contains("### Known limitations"));
 }
 
 #[test]
-fn trusted_release_requires_main_and_revalidates_the_package() {
+fn automatic_release_requires_main_and_revalidates_the_package() {
     let workflow = read(".github/workflows/release.yml");
 
-    assert!(workflow.starts_with("name: Release\n\non:\n  workflow_dispatch:\n"));
+    assert!(workflow.starts_with(
+        "name: Release\n\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n"
+    ));
     assert!(workflow.contains("  cancel-in-progress: false\n"));
     assert!(workflow.contains("if: github.ref == 'refs/heads/main'"));
     assert!(workflow.contains("environment: release"));
-    assert!(workflow.contains("contents: read\n      id-token: write"));
+    assert!(workflow.contains("needs: checks"));
     assert!(workflow.contains("persist-credentials: false"));
     assert!(workflow.contains("cargo +stable fmt --all -- --check"));
     assert!(workflow.contains(
@@ -56,23 +58,26 @@ fn trusted_release_requires_main_and_revalidates_the_package() {
     ));
     assert!(workflow.contains("cargo +stable test --workspace --all-features --locked"));
     assert!(workflow.contains("cargo +stable publish --dry-run --locked"));
-    assert!(workflow.contains("uses: rust-lang/crates-io-auth-action@v1"));
-    assert!(workflow.contains("CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}"));
+    assert!(workflow.contains("python3 .github/scripts/release.py"));
+    assert!(workflow.contains("CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}"));
     assert!(workflow.contains("cargo +stable publish --locked"));
 }
 
 #[test]
 fn release_is_tagged_only_after_the_registry_consumer_passes() {
     let workflow = read(".github/workflows/release.yml");
-    let publish = position(&workflow, "run: cargo +stable publish --locked");
-    let verify = position(&workflow, "  verify:\n");
+    let publish = position(&workflow, "          cargo +stable publish --locked");
+    let verify = position(
+        &workflow,
+        "      - name: Install the exact registry version",
+    );
     let consumer = position(&workflow, "cargo +stable test --manifest-path");
-    let release = position(&workflow, "run: gh release create");
+    let release = position(&workflow, "            gh release create");
 
     assert!(publish < verify);
     assert!(verify < consumer);
     assert!(consumer < release);
-    assert!(workflow.contains("needs: publish"));
+    assert!(workflow.contains("git push origin HEAD:main"));
     assert!(workflow.contains("for attempt in $(seq 1 18)"));
     assert!(workflow.contains("contents: write"));
 }
@@ -97,8 +102,8 @@ fn public_installation_docs_name_the_verified_registry_version() {
     let plan = read("docs/PORTING_PLAN.md");
 
     for public_entry_point in [&readme, &guide] {
-        assert!(public_entry_point.contains("cargo add --dev archunit@0.0.1"));
-        assert!(public_entry_point.contains("archunit = \"0.0.1\""));
+        assert!(public_entry_point.contains(&format!("cargo add --dev archunit@{VERSION}")));
+        assert!(public_entry_point.contains(&format!("archunit = \"{VERSION}\"")));
         assert!(!public_entry_point.contains("cargo add --dev --git"));
         assert!(!public_entry_point.contains("not on crates.io"));
         assert!(!public_entry_point.contains("not published on"));

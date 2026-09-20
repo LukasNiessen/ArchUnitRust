@@ -4,6 +4,7 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -26,6 +27,9 @@ jobs:
 
       - name: Install stable Rust with quality components
         run: rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
+
+      - name: Test release version selection and metadata updates
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
 
       - name: Check formatting
         run: cargo +stable fmt --all -- --check
