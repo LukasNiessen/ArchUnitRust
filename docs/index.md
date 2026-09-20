@@ -31,15 +31,15 @@ graph, and evaluates the rule.
 
 ## Install
 
-ArchUnitRust currently installs from Git as a development dependency and requires Rust 1.85 or
+ArchUnitRust 0.0.1 installs from crates.io as a development dependency and requires Rust 1.85 or
 newer:
 
 ```console
-cargo add --dev --git https://github.com/LukasNiessen/ArchUnitRust archunit
+cargo add --dev archunit@0.0.1
 ```
 
-Cargo records the resolved commit in `Cargo.lock`. The package is not on crates.io yet, so a
-versioned registry dependency is not currently an honest installation instruction.
+The equivalent manifest entry is `archunit = "0.0.1"` under `[dev-dependencies]`. Cargo records the
+resolved registry version in `Cargo.lock`.
 
 ## Your first rule
 

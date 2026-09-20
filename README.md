@@ -1,13 +1,14 @@
 # ArchUnitRust
 
+[![Crates.io](https://img.shields.io/crates/v/archunit.svg)](https://crates.io/crates/archunit)
 [![CI](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/ci.yml/badge.svg)](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/ci.yml)
 [![Documentation](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/pages.yml/badge.svg)](https://github.com/LukasNiessen/ArchUnitRust/actions/workflows/pages.yml)
 
 Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUnitRust is part of
 **ArchUnitEverything** — one architecture-testing library per language.
 
-> **Status:** usable from Git and under active development. The crate is not published on
-> crates.io yet; the current package version is `0.0.1` and requires Rust 1.85 or newer.
+> **Status:** `archunit` 0.0.1 is published on crates.io, requires Rust 1.85 or newer, and remains
+> under active development.
 
 [User guide](https://lukasniessen.github.io/ArchUnitRust/) ·
 [API reference](https://lukasniessen.github.io/ArchUnitRust/api/archunit/)
@@ -17,19 +18,18 @@ Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUni
 ArchUnit rules belong in the project that they check, so add the crate as a development dependency:
 
 ```console
-cargo add --dev --git https://github.com/LukasNiessen/ArchUnitRust archunit
+cargo add --dev archunit@0.0.1
 ```
 
 The equivalent `Cargo.toml` entry is:
 
 ```toml
 [dev-dependencies]
-archunit = { git = "https://github.com/LukasNiessen/ArchUnitRust" }
+archunit = "0.0.1"
 ```
 
-Cargo records the resolved Git commit in `Cargo.lock`. Commit that lockfile when the consuming
-project normally tracks it. After the first crates.io release, the Git dependency can be replaced
-by a versioned registry dependency.
+Cargo resolves the registry version into `Cargo.lock`. Commit that lockfile when the consuming
+project normally tracks it.
 
 ## File rules
 
@@ -140,10 +140,8 @@ have a source-checked example below:
 All Rust snippets in this README are included in the crate documentation and compiled as doctests.
 The sections after this guide are the detailed reference for the implemented surface.
 
-## What is not implemented yet
+## Known limitations
 
-- crates.io publication is tracked by [#44](https://github.com/LukasNiessen/ArchUnitRust/issues/44),
-  so installation currently uses the Git repository;
 - extraction is syntax-based: it does not expand macros or inspect build-script-generated source,
   evaluates `cfg` branches as a conservative union, and exposes files rather than Rust items as
   dependency nodes.

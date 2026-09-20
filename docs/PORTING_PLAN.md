@@ -289,7 +289,7 @@ preserve the small conventional commits made on the branch.
 | Cross-cutting | #39 | Opt-in deterministic logging is covered |
 | Self-hosting | #40 | ArchUnitRust enforces its own module rules |
 | Adoption | #41-#43 | README, source-checked rustdoc/GitHub Pages, and the full CI matrix are live |
-| Release | #44 | A verified package is published and install instructions are tested |
+| Release | #44 | `archunit` 0.0.1 is published and its exact registry install is tested |
 
 Issue #38 stays open until every selector family has exclusion coverage, even though the matching
 model is designed for exclusions in the kernel. Release notes state exactly which selectors have it.
