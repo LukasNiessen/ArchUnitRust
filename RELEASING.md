@@ -1,53 +1,57 @@
 # Releasing ArchUnitRust
 
-Crates.io versions are immutable. A release is complete only when the registry archive can be
-installed by a separate project, the matching Git tag and GitHub release exist, and the public
-installation instructions name that published version.
+The crates.io package and Rust import are both named **archunit**. Every push or merge to main
+starts the Release workflow. A manual workflow dispatch on main retries or completes a release.
 
-## One-time bootstrap for 0.0.1
+## Credentials
 
-Crates.io requires a crate's first version to be published manually before a trusted GitHub
-publisher can be configured. From a clean, current `main` whose CI is green:
+The repository secret CARGO_REGISTRY_TOKEN contains a crates.io API token permitted to publish
+archunit. The first publication also needs permission to create this crate, and the account must
+have a verified email address. The token is exposed only to the cargo publish step; it is not
+stored in Git or passed as a command-line argument.
 
-1. Sign in to crates.io, verify the account email address, and create a short-lived API token that
-   is permitted to publish a new crate. Never put the token in Git, an issue, a workflow log, or a
-   chat message.
-2. Store it with `cargo login`, run `cargo publish --dry-run --locked`, inspect the reported archive
-   contents, then run `cargo publish --locked` exactly once.
-3. Copy `tests/fixtures/registry_consumer/` to a temporary directory, rename
-   `Cargo.toml.template` to `Cargo.toml`, and run `cargo test --manifest-path <temp>/Cargo.toml`.
-   Retry briefly if the crates.io index has not propagated yet. This fixture must resolve
-   `archunit = "=0.0.1"`; do not add a path or Git override.
-4. Only after that test passes, create the matching release boundary:
+Maintainers can replace the secret with GitHub's repository settings or
+gh secret set CARGO_REGISTRY_TOKEN --repo LukasNiessen/ArchUnitRust, supplying the token on stdin.
 
-   ```console
-   gh release create v0.0.1 --target main --title "archunit v0.0.1" --generate-notes
-   ```
+## Automatic releases
 
-5. Remove the local token with `cargo logout` if it is not needed for another crate.
-6. In the crate's crates.io Trusted Publishing settings, add the GitHub repository owner
-   `LukasNiessen`, repository `ArchUnitRust`, workflow `release.yml`, and environment `release`.
+1. The reusable CI workflow runs formatting, Clippy, documentation, archive validation, the full
+   Linux/Windows/macOS test matrix, architecture tests, MSRV checks, and release-script tests.
+2. The release script checks crates.io. It uses Cargo.toml's version for the first publication.
+   For a new source commit whose manifest version is already published, it increments the latest
+   stable patch version. An explicit higher minor or major version in Cargo.toml is honored.
+3. The script updates the root manifest and lockfile, current installation examples, changelog,
+   and exact-version registry-consumer fixture. It commits only those release metadata files.
+4. The workflow reruns the quality gates and cargo publish --dry-run on that exact clean commit,
+   then pushes the metadata commit to main without force. If main advanced in the meantime, the
+   push fails before uploading; the newer main run will release the combined changes.
+5. cargo publish --locked uploads the crate. A separate temporary Cargo project then installs the
+   exact published version from crates.io and runs an architecture test against its own source.
+6. Only after that consumer passes does the workflow create the matching tag and GitHub release.
 
-Do not invoke `.github/workflows/release.yml` for 0.0.1: the trusted publisher cannot exist until
-that first version has reserved the crate name.
+Ordinary product changes still follow the issue/branch/PR workflow. The release bot is the explicit
+exception for version metadata on main. Its GITHUB_TOKEN push does not trigger another workflow,
+so automatic version bumps do not cause a release loop. Release attempts are serialized; GitHub
+may replace an older pending run with a newer one, which includes the intervening main changes.
 
-## Later releases
+## Retrying failures
 
-Prepare each version in its own reviewed branch and PR:
+Use the GitHub Actions rerun controls or dispatch Release on main. Each metadata commit records
+the original source SHA in a Release-Source trailer. A rerun recovers that commit, and compares
+the archive's .cargo_vcs_info.json commit with the checkout. If that exact version and commit are
+already on crates.io, publishing is skipped and registry verification/release creation resume.
+A registry or network error fails the job; only an HTTP 404 means the crate does not yet exist.
 
-1. Update `package.version` in `Cargo.toml` and refresh `Cargo.lock`.
-2. Move the relevant changelog entries under a dated version heading and update comparison links.
-3. Update the exact `archunit` version in
-   `tests/fixtures/registry_consumer/Cargo.toml.template` and the constant in
-   `tests/release_workflow.rs`.
-4. Run the complete local gate set and merge only after CI is green.
-5. From `main`, manually dispatch the Release workflow with the version number and no leading `v`.
+Crates.io versions cannot be overwritten, including yanked versions. Never force a release tag
+to point at different source. If a published version has a product defect, fix it through a PR;
+the next main run publishes a new patch.
 
-The publish job rechecks the version, tag absence, formatting, Clippy, all tests, rustdoc, and the
-crate archive before obtaining a short-lived crates.io token through OpenID Connect. The verify job
-then installs the exact registry version in the standalone fixture. Only after that succeeds does it
-create the Git tag and GitHub release.
+## Local checks
 
-If registry propagation delays the fixture, rerun only the failed verify job. The successful publish
-job must not be rerun for an immutable version. If publication itself fails before crates.io accepts
-the archive, correct the cause in a new PR; never reuse a version that the registry accepted.
+Run the Cargo gates in CONTRIBUTING.md, plus:
+
+    python -m unittest discover -s .github/scripts -p "test_*.py"
+    cargo publish --dry-run --locked
+
+The release script itself is intended for GitHub Actions: it requires GITHUB_SHA and GITHUB_OUTPUT,
+reads crates.io, and may create a local metadata commit. Do not run it in a dirty development tree.

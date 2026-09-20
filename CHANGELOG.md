@@ -5,7 +5,7 @@ Versioning; the `0.0.x` line deliberately signals that the public API is still e
 
 ## [Unreleased]
 
-## [0.0.1] - 2026-08-24
+## [0.0.1] - 2026-09-20
 
 ### Added
 
