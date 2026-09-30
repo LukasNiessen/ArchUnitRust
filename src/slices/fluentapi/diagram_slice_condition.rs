@@ -89,6 +89,7 @@ impl Checkable for DiagramSliceCondition {
             let graph = extraction.graph();
             let labels = self.projection().slice_labels(graph);
             logger.log_progress(format!("selected slices={}", labels.len()))?;
+            logger.log_subjects("selected slice", &labels)?;
             let empty = gather_empty_test_violations(
                 &labels,
                 "slices",

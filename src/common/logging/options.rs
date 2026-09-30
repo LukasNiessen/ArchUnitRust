@@ -42,6 +42,7 @@ struct FileOutput {
 pub struct LoggingOptions {
     level: LogLevel,
     console_output: bool,
+    console_color: bool,
     file_mode: LogFileMode,
     file_output: Option<FileOutput>,
 }
@@ -53,6 +54,7 @@ impl LoggingOptions {
         Self {
             level: LogLevel::Info,
             console_output: true,
+            console_color: false,
             file_mode: LogFileMode::Append,
             file_output: None,
         }
@@ -69,6 +71,13 @@ impl LoggingOptions {
     #[must_use]
     pub const fn with_console_output(mut self, enabled: bool) -> Self {
         self.console_output = enabled;
+        self
+    }
+
+    /// Enables ANSI severity highlighting for console records only. File records stay plain.
+    #[must_use]
+    pub const fn with_console_color(mut self, enabled: bool) -> Self {
+        self.console_color = enabled;
         self
     }
 
@@ -146,7 +155,7 @@ impl LoggingOptions {
     pub(super) fn write(&self, record: &LogRecord) -> Result<(), ArchUnitError> {
         self.validate()?;
         if self.console_output {
-            write_console(record)?;
+            write_console(record, self.console_color)?;
         }
         if let Some(output) = &self.file_output {
             write_file(output, self.file_mode, record)?;
@@ -165,6 +174,7 @@ impl PartialEq for LoggingOptions {
     fn eq(&self, other: &Self) -> bool {
         self.level == other.level
             && self.console_output == other.console_output
+            && self.console_color == other.console_color
             && self.file_mode == other.file_mode
             && self.file_path() == other.file_path()
     }
@@ -172,8 +182,21 @@ impl PartialEq for LoggingOptions {
 
 impl Eq for LoggingOptions {}
 
-fn write_console(record: &LogRecord) -> Result<(), ArchUnitError> {
-    let rendered = format!("{}\n", record.render());
+fn render_console(record: &LogRecord, color: bool) -> String {
+    if !color {
+        return format!("{}\n", record.render());
+    }
+    let code = match record.level() {
+        LogLevel::Debug => "36",
+        LogLevel::Info => "32",
+        LogLevel::Warn => "33",
+        LogLevel::Error => "31",
+    };
+    format!("\x1b[{code}m{}\x1b[0m\n", record.render())
+}
+
+fn write_console(record: &LogRecord, color: bool) -> Result<(), ArchUnitError> {
+    let rendered = render_console(record, color);
     let result = match record.level() {
         LogLevel::Warn | LogLevel::Error => std::io::stderr().lock().write_all(rendered.as_bytes()),
         LogLevel::Debug | LogLevel::Info => std::io::stdout().lock().write_all(rendered.as_bytes()),
@@ -486,5 +509,32 @@ mod tests {
             assert!(content.contains(&format!("[INFO] info: record-{index}")));
         }
         fs::remove_dir_all(directory).expect("temporary logging tree should be removable");
+    }
+}
+
+#[cfg(test)]
+mod console_color_tests {
+    use super::render_console;
+    use crate::common::{LogEventKind, LogLevel, LogRecord};
+
+    #[test]
+    fn ansi_is_explicit_and_does_not_change_the_destination_neutral_record() {
+        for (level, code) in [
+            (LogLevel::Debug, "36"),
+            (LogLevel::Info, "32"),
+            (LogLevel::Warn, "33"),
+            (LogLevel::Error, "31"),
+        ] {
+            let record = LogRecord::new(level, LogEventKind::Progress, "subject");
+            assert_eq!(
+                render_console(&record, false),
+                format!("{}\n", record.render())
+            );
+            assert_eq!(
+                render_console(&record, true),
+                format!("\x1b[{code}m{}\x1b[0m\n", record.render())
+            );
+            assert!(!record.render().contains('\x1b'));
+        }
     }
 }

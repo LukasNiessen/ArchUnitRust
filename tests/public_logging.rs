@@ -187,3 +187,74 @@ fn invalid_logging_configuration_precedes_rule_io_and_is_typed() {
         assert!(!error.to_string().contains("Cargo"));
     }
 }
+
+#[test]
+fn debug_inspection_preserves_rule_results_and_graph_snapshots() {
+    let output = TemporaryDirectory::new("inspection");
+    let logging = LoggingOptions::new()
+        .with_level(LogLevel::Debug)
+        .with_console_output(false)
+        .with_console_color(true)
+        .with_file_output(output.path());
+    let path = logging.file_path().expect("file sink").to_path_buf();
+    let options = CheckOptions::new().with_logging(logging);
+    let rule = project_files_in(fixture("layered_project"))
+        .in_file("src/api/mod.rs")
+        .should()
+        .have_name("wrong.rs");
+    assert_eq!(
+        format!("{:?}", rule.check().expect("quiet rule")),
+        format!("{:?}", rule.check_with(&options).expect("logged rule"))
+    );
+    let graph = archunit::project_graph_in(fixture("layered_project")).focus_on("src/api/**", 1);
+    let expected = graph.snapshot().expect("quiet snapshot");
+    assert_eq!(
+        expected,
+        graph
+            .with_check_options(options)
+            .snapshot()
+            .expect("logged snapshot")
+    );
+    let content = fs::read_to_string(path).expect("read inspection log");
+    for detail in [
+        "graph cache=",
+        "discovered file: src/api/mod.rs",
+        "dependency:",
+        "selected file: src/api/mod.rs",
+        "violation details:",
+        "start check: graph.snapshot",
+        "graph query:",
+        "graph summary:",
+        "report node:",
+        "report dependency:",
+        "end check: graph.snapshot; violations=0",
+    ] {
+        assert!(content.contains(detail), "missing {detail}");
+    }
+    assert!(!content.contains('\x1b'), "file logs must remain plain");
+}
+
+#[test]
+fn non_debug_levels_filter_inspection_without_changing_violations() {
+    let rule = project_files_in(fixture("layered_project"))
+        .in_file("src/api/mod.rs")
+        .should()
+        .have_name("wrong.rs");
+    let expected = rule.check().expect("quiet rule");
+    for level in [LogLevel::Info, LogLevel::Warn, LogLevel::Error] {
+        let output = TemporaryDirectory::new("filtered");
+        let logging = LoggingOptions::new()
+            .with_level(level)
+            .with_console_output(false)
+            .with_file_output(output.path());
+        let path = logging.file_path().expect("file sink").to_path_buf();
+        let actual = rule
+            .check_with(&CheckOptions::new().with_logging(logging))
+            .expect("logged rule");
+        assert_eq!(format!("{actual:?}"), format!("{expected:?}"));
+        let content = fs::read_to_string(path).unwrap_or_default();
+        assert!(!content.contains("[DEBUG]"));
+        assert_eq!(content.contains("start check"), level == LogLevel::Info);
+        assert_eq!(content.contains("log violation"), level != LogLevel::Error);
+    }
+}

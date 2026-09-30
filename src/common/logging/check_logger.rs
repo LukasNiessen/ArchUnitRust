@@ -22,6 +22,26 @@ impl<'a> CheckLogger<'a> {
         self.options.is_some()
     }
 
+    /// Returns whether a severity is enabled before preparing expensive inspection details.
+    #[must_use]
+    pub fn is_enabled_for(&self, level: LogLevel) -> bool {
+        self.options.is_some_and(|options| options.accepts(level))
+    }
+
+    /// Logs each selected subject at debug level without evaluating the iterator when disabled.
+    pub fn log_subjects<S: AsRef<str>>(
+        &self,
+        context: &str,
+        subjects: impl IntoIterator<Item = S>,
+    ) -> Result<(), ArchUnitError> {
+        if self.is_enabled_for(LogLevel::Debug) {
+            for subject in subjects {
+                self.log_progress(format!("{context}: {}", subject.as_ref()))?;
+            }
+        }
+        Ok(())
+    }
+
     /// Validates the explicitly configured sinks without emitting a record.
     ///
     /// Built-in architecture checks call this before project discovery. Custom [`crate::Checkable`]

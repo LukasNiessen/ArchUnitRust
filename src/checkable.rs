@@ -27,6 +27,9 @@ where
         Ok(violations) => {
             for violation in &violations {
                 logger.log_violation(violation.kind().as_str())?;
+                if logger.is_enabled_for(crate::common::LogLevel::Debug) {
+                    logger.log_progress(format!("violation details: {violation:?}"))?;
+                }
             }
             logger.end_check(rule_name, violations.len())?;
             Ok(violations)

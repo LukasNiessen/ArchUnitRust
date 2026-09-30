@@ -88,6 +88,7 @@ impl Checkable for MatchPatternFileCondition {
             let extraction = extract_graph_with_options(&project, options)?;
             let selected = selected_nodes(extraction.graph(), self.filters());
             logger.log_progress(format!("selected files={}", selected.len()))?;
+            logger.log_subjects("selected file", selected.iter().map(|node| &node.label))?;
             if let Some(violation) =
                 empty_selection_violation(&selected, self.filters(), self.is_negated(), options)
             {

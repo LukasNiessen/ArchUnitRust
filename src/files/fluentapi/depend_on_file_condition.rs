@@ -127,6 +127,7 @@ impl Checkable for DependOnFileCondition {
             let extraction = extract_graph_with_options(&project, options)?;
             let selected = selected_nodes(extraction.graph(), self.subject_filters());
             logger.log_progress(format!("selected files={}", selected.len()))?;
+            logger.log_subjects("selected file", selected.iter().map(|node| &node.label))?;
             if let Some(violation) = empty_selection_violation(
                 &selected,
                 self.subject_filters(),

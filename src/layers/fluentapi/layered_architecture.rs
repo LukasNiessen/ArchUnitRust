@@ -266,6 +266,7 @@ impl Checkable for LayeredArchitecture {
                         "layer {source_layer}; selected files={}",
                         selected.len()
                     ))?;
+                    logger.log_subjects(source_layer, selected.iter().map(|node| &node.label))?;
                     violations.extend(
                         gather_empty_test_violations(
                             &selected,
