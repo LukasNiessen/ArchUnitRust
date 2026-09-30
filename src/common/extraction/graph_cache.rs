@@ -7,7 +7,7 @@ use super::{
     CargoProject, DEFAULT_EXCLUDED_DIRECTORIES, GraphExtraction, SourceOptions,
     extract_graph::extract_graph_uncached,
 };
-use crate::common::{ArchUnitError, CheckOptions, TechnicalError};
+use crate::common::{ArchUnitError, CheckLogger, CheckOptions, LogLevel, TechnicalError};
 
 const CFG_POLICY: &str = "conservative-union";
 const FEATURE_POLICY: &str = "cargo-metadata-declarations";
@@ -59,7 +59,7 @@ pub fn extract_graph(
     project: &CargoProject,
     source_options: SourceOptions,
 ) -> Result<GraphExtraction, ArchUnitError> {
-    extract_graph_cached(project, source_options, false)
+    extract_graph_cached(project, source_options, false).map(|(extraction, _)| extraction)
 }
 
 /// Extracts a graph using the extraction-related settings from one architecture check.
@@ -71,7 +71,34 @@ pub fn extract_graph_with_options(
     options: &CheckOptions,
 ) -> Result<GraphExtraction, ArchUnitError> {
     let source_options = SourceOptions::new().with_dev_targets(options.includes_test_sources());
-    extract_graph_cached(project, source_options, options.clears_cache())
+    let logger = CheckLogger::new(options.logging());
+    logger.validate()?;
+    let (extraction, cached) =
+        extract_graph_cached(project, source_options, options.clears_cache())?;
+    if logger.is_enabled_for(LogLevel::Debug) {
+        logger.log_progress(format!(
+            "graph cache={}; clear requested={}; include test sources={}",
+            if cached { "hit" } else { "miss" },
+            options.clears_cache(),
+            options.includes_test_sources(),
+        ))?;
+        logger.log_progress(format!(
+            "extracted edges={}; diagnostics={}",
+            extraction.graph().edges().len(),
+            extraction.diagnostics().len()
+        ))?;
+        for edge in extraction.graph().edges() {
+            if edge.is_self_edge() {
+                logger.log_progress(format!("discovered file: {}", edge.source))?;
+            } else {
+                logger.log_progress(format!("dependency: {edge}"))?;
+            }
+        }
+        for diagnostic in extraction.diagnostics() {
+            logger.log_progress(format!("extraction diagnostic: {diagnostic:?}"))?;
+        }
+    }
+    Ok(extraction)
 }
 
 /// Clears every memoized graph and its diagnostics in the current process.
@@ -88,7 +115,7 @@ fn extract_graph_cached(
     project: &CargoProject,
     source_options: SourceOptions,
     clear_before: bool,
-) -> Result<GraphExtraction, ArchUnitError> {
+) -> Result<(GraphExtraction, bool), ArchUnitError> {
     if clear_before {
         clear_graph_cache()?;
     }
@@ -96,7 +123,7 @@ fn extract_graph_cached(
     let generation = {
         let cache = graph_cache().read().map_err(|_| cache_lock_error("read"))?;
         if let Some(extraction) = cache.entries.get(&key) {
-            return Ok(extraction.clone());
+            return Ok((extraction.clone(), true));
         }
         cache.generation
     };
@@ -106,9 +133,9 @@ fn extract_graph_cached(
         .write()
         .map_err(|_| cache_lock_error("write"))?;
     if cache.generation != generation {
-        return Ok(extracted);
+        return Ok((extracted, false));
     }
-    Ok(cache.entries.entry(key).or_insert(extracted).clone())
+    Ok((cache.entries.entry(key).or_insert(extracted).clone(), false))
 }
 
 fn cache_lock_error(operation: &str) -> ArchUnitError {

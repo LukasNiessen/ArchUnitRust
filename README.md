@@ -296,11 +296,10 @@ snapshot. `MetricsExporter` also renders or writes a `MetricsReportData` map dir
 no scripts or network dependencies; names, values, and titles are HTML-escaped. Timestamps are UTC
 and can be disabled for byte-stable build artifacts. Custom CSS replaces the built-in stylesheet.
 
-## Per-check logging
+## Detailed inspection and readable output
 
 Checks are quiet by default. Logging is enabled only by putting a `LoggingOptions` value into the
-`CheckOptions` passed to that check; the crate never reads a global logger or an environment
-variable:
+`CheckOptions` passed to that check; the crate never configures a global logger:
 
 ```rust,no_run
 use archunit::{
@@ -331,11 +330,25 @@ fn check_boundaries() -> Result<(), ArchUnitError> {
 }
 ```
 
-`LoggingOptions::new()` logs at `Info` level to the console. `Debug` adds progress and metric
-records; violations and failed verdicts use `Warn`, while execution errors use `Error`. The fixed
+`LoggingOptions::new()` logs at `Info` level to the console. `Debug` is the fullest inspection
+level: cache hit/miss and source options, every discovered file and resolved dependency, extraction
+diagnostics, selected files/layers/slices, metric values and thresholds, and violation details.
+Graph reports also log their query, selected nodes, aggregated edges, and summary. `Info` shows
+check boundaries; violations and failed verdicts use `Warn`, while execution errors use `Error`. The fixed
 event vocabulary is `start check`, `end check`, `log progress`, `log violation`, and `log metric`.
 Ordinary `debug`, `info`, `warn`, and `error` records are also available through `CheckLogger` for
 custom `Checkable` implementations.
+
+For a highlighted terminal transcript, add `.with_console_color(true)` to the logging options.
+Debug is cyan, info green, warnings yellow, and errors red. ANSI requires an explicit request and an interactive console, respects `NO_COLOR` and `CI`,
+and never appears in redirected output or log files. Debug inspection reads the graph and selected values already used by the
+check; it does not rerun predicates or change violations. Logging I/O failures retain their
+existing error behavior.
+
+For test failures, `ResultFactory` already assembles numbered, indented explanations with
+selectors, dependency evidence, cycles, and metric values. Use
+`TestResultOptions::new().with_color(ColorChoice::Always)` for ANSI highlighting,
+`ColorChoice::Never` for plain CI artifacts, or the default `Auto`.
 
 File output creates missing directories and chooses a collision-resistant, UTC-timestamped `.log`
 filename. `file_path()` exposes that path before execution so CI can archive it. `Append` preserves

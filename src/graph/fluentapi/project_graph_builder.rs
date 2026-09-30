@@ -2,8 +2,8 @@ use std::path::Path;
 
 use crate::{
     common::{
-        ArchUnitError, CheckOptions, PatternError, ProjectLocator, RegexFactory, UserError,
-        extract_graph_with_options, locate_project_from,
+        ArchUnitError, CheckLogger, CheckOptions, LogLevel, PatternError, ProjectLocator,
+        RegexFactory, UserError, extract_graph_with_options, locate_project_from,
     },
     graph::{
         FolderDepthCollapse, GraphCollapse, GraphQueryError, GraphQueryOptions, GraphRenderer,
@@ -135,9 +135,42 @@ impl ProjectGraphBuilder {
             return Err(configuration_error(error.clone()));
         }
 
+        let logger = CheckLogger::new(self.check_options.logging());
+        logger.validate()?;
+        logger.start_check("graph.snapshot")?;
+        let result = self.snapshot_logged(&logger);
+        match result {
+            Ok(snapshot) => {
+                logger.end_check("graph.snapshot", 0)?;
+                Ok(snapshot)
+            }
+            Err(error) => {
+                let _ = logger.error(format!("graph.snapshot: {error}"));
+                Err(error)
+            }
+        }
+    }
+
+    fn snapshot_logged(
+        &self,
+        logger: &CheckLogger<'_>,
+    ) -> Result<GraphReportSnapshot, ArchUnitError> {
         let project = locate_project_from(self.project_locator())?;
         let extraction = extract_graph_with_options(&project, self.check_options())?;
-        create_graph_snapshot(extraction.graph(), self.options()).map_err(configuration_error)
+        let snapshot = create_graph_snapshot(extraction.graph(), self.options())
+            .map_err(configuration_error)?;
+        if logger.is_enabled_for(LogLevel::Debug) {
+            logger.log_progress(format!("graph query: {:?}", self.options()))?;
+            logger.log_progress(format!("graph summary: {:?}", snapshot.summary))?;
+            logger.log_subjects("report node", snapshot.nodes.iter().map(|node| &node.label))?;
+            for edge in &snapshot.edges {
+                logger.log_progress(format!(
+                    "report dependency: {} -> {}; count={}; external={}; kinds={}",
+                    edge.source, edge.target, edge.count, edge.external, edge.import_kinds
+                ))?;
+            }
+        }
+        Ok(snapshot)
     }
 
     /// Extracts the project and returns only the queried snapshot counts.
