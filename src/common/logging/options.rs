@@ -1,7 +1,7 @@
 use std::{
     fmt,
     fs::{self, OpenOptions},
-    io::Write,
+    io::{IsTerminal, Write},
     path::{Path, PathBuf},
     process,
     sync::{Arc, Mutex},
@@ -74,7 +74,8 @@ impl LoggingOptions {
         self
     }
 
-    /// Enables ANSI severity highlighting for console records only. File records stay plain.
+    /// Requests ANSI severity highlighting on interactive consoles outside CI/NO_COLOR.
+    /// File records always stay plain.
     #[must_use]
     pub const fn with_console_color(mut self, enabled: bool) -> Self {
         self.console_color = enabled;
@@ -195,7 +196,21 @@ fn render_console(record: &LogRecord, color: bool) -> String {
     format!("\x1b[{code}m{}\x1b[0m\n", record.render())
 }
 
+fn console_color_allowed(requested: bool, terminal: bool, no_color: bool, ci: bool) -> bool {
+    requested && terminal && !no_color && !ci
+}
+
 fn write_console(record: &LogRecord, color: bool) -> Result<(), ArchUnitError> {
+    let terminal = match record.level() {
+        LogLevel::Warn | LogLevel::Error => std::io::stderr().is_terminal(),
+        LogLevel::Debug | LogLevel::Info => std::io::stdout().is_terminal(),
+    };
+    let color = console_color_allowed(
+        color,
+        terminal,
+        std::env::var_os("NO_COLOR").is_some(),
+        std::env::var_os("CI").is_some(),
+    );
     let rendered = render_console(record, color);
     let result = match record.level() {
         LogLevel::Warn | LogLevel::Error => std::io::stderr().lock().write_all(rendered.as_bytes()),
@@ -514,8 +529,21 @@ mod tests {
 
 #[cfg(test)]
 mod console_color_tests {
-    use super::render_console;
+    use super::{console_color_allowed, render_console};
     use crate::common::{LogEventKind, LogLevel, LogRecord};
+
+    #[test]
+    fn console_color_requires_an_explicit_interactive_request_outside_ci() {
+        assert!(console_color_allowed(true, true, false, false));
+        for (request, terminal, no_color, ci) in [
+            (false, true, false, false),
+            (true, false, false, false),
+            (true, true, true, false),
+            (true, true, false, true),
+        ] {
+            assert!(!console_color_allowed(request, terminal, no_color, ci));
+        }
+    }
 
     #[test]
     fn ansi_is_explicit_and_does_not_change_the_destination_neutral_record() {

@@ -80,7 +80,12 @@ impl LogRecord {
     /// Renders the deterministic destination-neutral record.
     #[must_use]
     pub fn render(&self) -> String {
-        format!("[{}] {}: {}", self.level, self.event.as_str(), self.message)
+        format!(
+            "[{}] {}: {}",
+            self.level,
+            self.event.as_str(),
+            render_message(&self.message)
+        )
     }
 }
 
@@ -88,10 +93,35 @@ fn sanitize_message(message: &str) -> String {
     message.replace('\r', "\\r").replace('\n', "\\n")
 }
 
+fn render_message(message: &str) -> String {
+    let mut safe = String::new();
+    for character in message.chars() {
+        if character.is_control() {
+            safe.push_str(&character.escape_default().to_string());
+        } else {
+            safe.push(character);
+        }
+    }
+    safe
+}
+
 #[cfg(test)]
 mod tests {
     use super::{LogEventKind, LogRecord};
     use crate::common::LogLevel;
+
+    #[test]
+    fn control_characters_cannot_inject_terminal_formatting() {
+        let record = LogRecord::new(
+            LogLevel::Debug,
+            LogEventKind::Progress,
+            "src/\x1b[31mfile.rs\t",
+        );
+        assert!(record.message().contains('\x1b'));
+        assert!(!record.render().contains('\x1b'));
+        assert!(!record.render().contains('\t'));
+        assert!(record.render().contains("file.rs"));
+    }
 
     #[test]
     fn records_use_the_fixed_vocabulary_and_remain_one_line() {
