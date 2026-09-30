@@ -5,4 +5,4 @@ edition = "2024"
 publish = false
 
 [dev-dependencies]
-archunit = "=0.0.1"
+archunit = "=0.0.2"

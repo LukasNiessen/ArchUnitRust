@@ -7,7 +7,7 @@
 Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUnitRust is part of
 **ArchUnitEverything** — one architecture-testing library per language.
 
-> **Status:** `archunit` 0.0.1 is published on crates.io, requires Rust 1.85 or newer, and remains
+> **Status:** `archunit` 0.0.2 is published on crates.io, requires Rust 1.85 or newer, and remains
 > under active development.
 
 [User guide](https://lukasniessen.github.io/ArchUnitRust/) ·
@@ -18,14 +18,14 @@ Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUni
 ArchUnit rules belong in the project that they check, so add the crate as a development dependency:
 
 ```console
-cargo add --dev archunit@0.0.1
+cargo add --dev archunit@0.0.2
 ```
 
 The equivalent `Cargo.toml` entry is:
 
 ```toml
 [dev-dependencies]
-archunit = "0.0.1"
+archunit = "0.0.2"
 ```
 
 Cargo resolves the registry version into `Cargo.lock`. Commit that lockfile when the consuming
