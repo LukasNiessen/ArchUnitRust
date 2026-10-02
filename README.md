@@ -13,7 +13,7 @@ Architecture tests for Cargo projects, expressed as ordinary Rust tests. ArchUni
 [User guide](https://lukasniessen.github.io/ArchUnitRust/) ·
 [API reference](https://lukasniessen.github.io/ArchUnitRust/api/archunit/)
 
-## Install
+## ⚡ Install
 
 ArchUnit rules belong in the project that they check, so add the crate as a development dependency:
 
@@ -54,6 +54,10 @@ Run it with `cargo test --test architecture`. `project_files()` discovers the co
 package or workspace, analyzes production targets, and returns a lazy rule value. `assert_passes!`
 executes the rule and reports every violation with its dependency evidence. No test-framework
 adapter or global initialization is required.
+
+## 🎬 Demo
+
+https://github.com/user-attachments/assets/45f084a1-58da-4de2-89ed-5a2ba9ab12d0
 
 ### Fluent API grammar
 
